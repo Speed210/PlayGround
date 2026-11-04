@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#070b13">
+  <meta name="description" content="Nightfall — a survival game of shelter, firelight, and things that learn where you hide.">
+  <title>Nightfall — Keep Moving</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="world" aria-label="Nightfall game world"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <div id="damageFlash" aria-hidden="true"></div>
+    <div id="healFlash" aria-hidden="true"></div>
+
+    <div id="hud" aria-hidden="false">
+      <section class="status-panel glass" aria-label="Status">
+        <div class="brand-row">
+          <span class="brand-mark">✦</span>
+          <span class="brand-name">NIGHTFALL</span>
+          <span id="bestBadge" class="best-badge">BEST —</span>
+        </div>
+        <div class="day-row">
+          <h1 id="dayLabel">DAY 1</h1>
+          <span id="phaseChip" class="phase-chip day">DAYLIGHT</span>
+        </div>
+        <div class="timeline" aria-hidden="true">
+          <div class="timeline-track"><i id="timeFill"></i></div>
+          <span class="timeline-glow" id="timeGlow"></span>
+        </div>
+        <div class="time-row">
+          <span id="timeLeft">Nightfall in 1:10</span>
+          <span id="objective" class="objective">Find shelter</span>
+        </div>
+        <div class="vital-row">
+          <span class="vital-icon" aria-hidden="true"></span>
+          <div class="vital-track"><i id="healthFill"></i></div>
+          <b id="healthText">100</b>
+        </div>
+      </section>
+
+      <section class="map-panel glass" aria-label="Valley map">
+        <div class="map-head"><span>THE VALLEY</span><i class="live-dot"></i></div>
+        <canvas id="minimap" width="200" height="132"></canvas>
+        <div class="map-foot">
+          <span id="dreadLabel">DREAD 1.0</span>
+          <span id="hauntLabel">FRESH GROUND</span>
+        </div>
+      </section>
+
+      <div class="sys-buttons">
+        <button id="muteBtn" class="sys-btn" type="button" aria-label="Toggle sound" title="Mute (M)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2-3.74v7.48A4.5 4.5 0 0 0 16.5 12z"/></svg>
+        </button>
+        <button id="pauseBtn" class="sys-btn" type="button" aria-label="Pause game" title="Pause (Esc)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zm7 0h3v14h-3z"/></svg>
+        </button>
+      </div>
+
+      <div id="resourceTray" class="resource-tray glass" aria-label="Resources">
+        <span class="res"><i class="res-dot wood"></i><span>WOOD</span><b id="woodCount">0</b></span>
+        <span class="res"><i class="res-dot stone"></i><span>STONE</span><b id="stoneCount">0</b></span>
+        <span class="res"><i class="res-dot scrap"></i><span>SCRAP</span><b id="scrapCount">0</b></span>
+      </div>
+
+      <div id="weaponBox" class="weapon-box glass" aria-label="Weapon">
+        <div class="weapon-title">REVOLVER <span id="weaponTier">Mk I</span></div>
+        <div class="weapon-sub">Unlimited rounds · hold to fire</div>
+        <div id="controlHint" class="control-hint">WASD move · Mouse aim · E use · P pause</div>
+      </div>
+
+      <aside id="shelterPanel" class="shelter-panel glass" aria-label="Shelter">
+        <div class="sp-head">
+          <div>
+            <div class="sp-kicker">SHELTER</div>
+            <h2 id="shelterName">Ranger's Hut</h2>
+          </div>
+          <span id="hauntBadge" class="haunt-badge fresh">FRESH</span>
+        </div>
+        <p id="shelterPerk" class="sp-perk">Sturdy walls, clear sightlines.</p>
+        <div class="bar-row">
+          <span>BARRICADE</span>
+          <b id="barricadeText">150 / 150</b>
+        </div>
+        <div class="bar-track"><i id="barricadeFill"></i></div>
+        <div class="sp-meta">
+          <span id="armorText">ARMOR 0%</span>
+          <span id="threatText">TONIGHT 1.0</span>
+        </div>
+        <div id="hauntWarning" class="haunt-warning" hidden>
+          <span class="warn-mark">!</span>
+          <span id="hauntWarningText">The dark remembers this place. Return and demons will rise.</span>
+        </div>
+        <button id="claimBtn" class="claim-btn" type="button">Claim Shelter <kbd>E</kbd></button>
+        <div id="fortGrid" class="fort-grid">
+          <button class="fort-btn" type="button" data-action="fortify">
+            <span class="fort-top"><i class="res-dot wood"></i><b>Barricade</b><em id="fortifyCost">3</em></span>
+            <small id="fortifyDesc">+80 integrity</small>
+          </button>
+          <button class="fort-btn" type="button" data-action="reinforce">
+            <span class="fort-top"><i class="res-dot stone"></i><b>Reinforce</b><em id="reinforceCost">3</em></span>
+            <small id="reinforceDesc">+10% armor</small>
+          </button>
+          <button class="fort-btn" type="button" data-action="traps">
+            <span class="fort-top"><i class="res-dot scrap"></i><b>Spike Ring</b><em id="trapsCost">4</em></span>
+            <small id="trapsDesc">+9 damage/sec</small>
+          </button>
+          <button class="fort-btn" type="button" data-action="repair">
+            <span class="fort-top"><i class="res-dot wood"></i><b>Repair</b><em id="repairCost">2</em></span>
+            <small id="repairDesc">+90 integrity</small>
+          </button>
+        </div>
+        <button id="weaponBtn" class="weapon-upgrade" type="button">
+          <span><b>Upgrade Revolver</b><small id="weaponUpgradeDesc">More damage, faster fire</small></span>
+          <span class="weapon-cost"><i class="res-dot scrap"></i><b id="weaponCost">8</b></span>
+        </button>
+      </aside>
+
+      <div id="interactPrompt" class="interact-prompt glass" hidden>
+        <kbd id="interactKey">E</kbd>
+        <span id="interactText">Gather wood</span>
+      </div>
+
+      <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+
+      <div id="centerBanner" class="center-banner" aria-live="assertive">
+        <span id="bannerKicker">NIGHT 1</span>
+        <strong id="bannerTitle">NIGHTFALL</strong>
+        <small id="bannerSub">They are coming.</small>
+      </div>
+
+      <div id="mobileControls" aria-label="Touch controls">
+        <div id="joystick" class="joystick">
+          <div class="stick-base">
+            <div id="stickNub" class="stick-nub"></div>
+          </div>
+        </div>
+        <button id="useBtn" class="use-btn" type="button">USE</button>
+        <button id="fireBtn" class="fire-btn" type="button">FIRE</button>
+      </div>
+
+      <div id="crosshair" class="crosshair" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><span></span>
+      </div>
+    </div>
+
+    <!-- MAIN MENU -->
+    <section id="menuScreen" class="screen menu-screen" aria-label="Main menu">
+      <div class="menu-scrim"></div>
+      <div class="menu-layout">
+        <div class="menu-content">
+          <div class="menu-kicker"><i></i>A SURVIVAL TALE<i></i></div>
+          <h1 class="title">NIGHT<span>FALL</span></h1>
+          <p class="menu-tagline">Keep moving. Keep the fire alive.</p>
+          <p class="menu-story">The dead own the dark. By day, forage the valley and find a place to hide. By night, barricade the doors and listen to them learning your name.</p>
+          <div class="menu-rule"><span></span><b>SHELTERS REMEMBER</b><span></span></div>
+          <p class="menu-warning">Never sleep in the same shelter twice. The dark remembers old ground, and old ground breeds demons.</p>
+          <div class="menu-actions">
+            <button id="startBtn" class="primary-btn" type="button">Start Game</button>
+            <div class="best-line">BEST SURVIVAL <b id="bestDays">—</b></div>
+          </div>
+          <div class="menu-controls">
+            <span><kbd>WASD</kbd> move</span>
+            <span><kbd>MOUSE</kbd> aim · fire</span>
+            <span><kbd>E</kbd> use</span>
+            <span><kbd>ESC</kbd> pause</span>
+          </div>
+        </div>
+        <div class="menu-aside">
+          <div class="aside-stamp">FIELD NOTES<br><b>NO. 07</b></div>
+          <p>“When the sun drops, do not be caught in the open. If they cannot reach you, they will take the walls apart with their hands.”</p>
+        </div>
+      </div>
+      <div class="menu-foot">A game of one more night · Headphones recommended</div>
+    </section>
+
+    <!-- PAUSE -->
+    <section id="pauseScreen" class="screen overlay-screen" aria-label="Paused">
+      <div class="screen-card compact">
+        <div class="screen-kicker">THE DARK WAITS</div>
+        <h2>Paused</h2>
+        <p>Take a breath. The night will keep.</p>
+        <div class="screen-actions">
+          <button id="resumeBtn" class="primary-btn" type="button">Resume</button>
+          <button id="pauseRestartBtn" class="ghost-btn" type="button">Restart Run</button>
+        </div>
+        <div class="screen-hint">Esc to resume · M to toggle sound</div>
+      </div>
+    </section>
+
+    <!-- DAWN -->
+    <section id="dawnScreen" class="screen overlay-screen dawn-screen" aria-label="Dawn survived">
+      <div class="screen-card dawn-card">
+        <div class="screen-kicker">THE SUN RETURNS</div>
+        <h2 id="dawnTitle">Dawn breaks.</h2>
+        <p id="dawnText">You survived the night. The valley is quiet again — but not for long.</p>
+        <div class="stat-grid">
+          <div><span>NIGHT</span><b id="dawnNight">1</b></div>
+          <div><span>KILLS</span><b id="dawnKills">0</b></div>
+          <div><span>BARRICADE</span><b id="dawnBarricade">0%</b></div>
+          <div><span>VITALITY</span><b id="dawnHealth">100</b></div>
+        </div>
+        <p id="dawnAdvice" class="dawn-advice">Move on. A fresh shelter keeps the dark weak.</p>
+        <div class="screen-actions">
+          <button id="continueBtn" class="primary-btn" type="button">Break Camp</button>
+        </div>
+        <div class="screen-hint">Continuing in <span id="dawnCountdown">9</span>s · Enter to continue</div>
+      </div>
+    </section>
+
+    <!-- GAME OVER -->
+    <section id="gameoverScreen" class="screen overlay-screen death-screen" aria-label="Game over">
+      <div class="screen-card death-card">
+        <div class="screen-kicker">THE DARK CLAIMS YOU</div>
+        <h2>You did not see dawn.</h2>
+        <p id="deathText">They found you on the second night.</p>
+        <div class="stat-grid">
+          <div><span>DAYS SURVIVED</span><b id="deathDays">0</b></div>
+          <div><span>NIGHTS HELD</span><b id="deathNights">0</b></div>
+          <div><span>CREATURES KILLED</span><b id="deathKills">0</b></div>
+          <div><span>BEST RUN</span><b id="deathBest">0</b></div>
+        </div>
+        <p id="deathAdvice" class="death-advice">Stay light. Move at first light. Never let them learn one place too well.</p>
+        <div class="screen-actions">
+          <button id="retryBtn" class="primary-btn" type="button">Try Again</button>
+        </div>
+        <div class="screen-hint">There is always one more night.</div>
+      </div>
+    </section>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
