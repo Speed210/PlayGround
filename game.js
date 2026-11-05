@@ -836,6 +836,7 @@
       }
       if (game.mode !== 'playing') return;
       if (code === 'KeyE') { doInteract(); return; }
+      if (code === 'KeyR') { buyFort('repair'); return; }
       if (code === 'Space') { game.firing = true; return; }
       keys.add(code);
     });
@@ -1596,9 +1597,13 @@
     spawnSparks(e.x, e.y, 6, e.type === 'wraith' ? '#c77bff' : '#d5533f', 1.1);
     game.shake = Math.max(game.shake, e.type === 'brute' ? 6 : 2.5);
     Sound.kill();
-    if (Math.random() < (e.type === 'brute' ? 0.5 : 0.24)) {
-      game.resources.scrap++;
-      addText(e.x, e.y - 20, '+1 SCRAP', '#7fb2a5');
+    // The fallen are salvage: sometimes iron, sometimes timber or stone.
+    if (Math.random() < (e.type === 'brute' ? 0.75 : 0.4)) {
+      const roll = Math.random();
+      const type = roll < 0.42 ? 'scrap' : roll < 0.72 ? 'wood' : 'stone';
+      game.resources[type]++;
+      const color = type === 'wood' ? '#b07a47' : type === 'stone' ? '#9aa1a0' : '#7fb2a5';
+      addText(e.x, e.y - 20, `+1 ${type.toUpperCase()}`, color);
     }
   }
 
@@ -1672,6 +1677,8 @@
   }
 
   function updateSpawning(dt) {
+    // Daylight belongs to scavenging. The dark only comes out after dusk.
+    if (game.phase !== 'night') return;
     if (game.spawnQueue > 0) {
       game.queueTimer -= dt;
       if (game.queueTimer <= 0) {
@@ -3309,7 +3316,7 @@
   let lastFrame = performance.now();
 
   function frame(now) {
-    const dt = Math.min(0.05, Math.max(0.001, (now - lastFrame) / 1000));
+    const dt = Math.min(0.1, Math.max(0.001, (now - lastFrame) / 1000));
     lastFrame = now;
 
     if (game.mode === 'playing') {
