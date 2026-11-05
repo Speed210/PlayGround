@@ -42,7 +42,7 @@
       </section>
 
       <section class="map-panel glass" aria-label="Valley map">
-        <div class="map-head"><span>THE VALLEY</span><i class="live-dot"></i></div>
+        <div class="map-head"><span id="mapTitle">CH. I · THE VALLEY</span><i class="live-dot"></i></div>
         <canvas id="minimap" width="200" height="132"></canvas>
         <div class="map-foot">
           <span id="dreadLabel">DREAD 1.0</span>
@@ -80,6 +80,7 @@
           <span id="hauntBadge" class="haunt-badge fresh">FRESH</span>
         </div>
         <p id="shelterPerk" class="sp-perk">Sturdy walls, clear sightlines.</p>
+        <p id="shelterOccupant" class="sp-occupant">Vacant shelter.</p>
         <div class="bar-row">
           <span>BARRICADE</span>
           <b id="barricadeText">150 / 150</b>
@@ -118,6 +119,16 @@
         </button>
       </aside>
 
+      <section id="teamPanel" class="team-panel glass" aria-label="Companions">
+        <div class="team-head">
+          <span>COMPANIONS</span>
+          <b id="teamCount">0 / 2</b>
+        </div>
+        <div id="teamList" class="team-list">
+          <div id="teamEmpty" class="team-empty">No one walks with you.</div>
+        </div>
+      </section>
+
       <div id="interactPrompt" class="interact-prompt glass" hidden>
         <kbd id="interactKey">E</kbd>
         <span id="interactText">Gather wood</span>
@@ -154,9 +165,9 @@
           <div class="menu-kicker"><i></i>A SURVIVAL TALE<i></i></div>
           <h1 class="title">NIGHT<span>FALL</span></h1>
           <p class="menu-tagline">Keep moving. Keep the fire alive.</p>
-          <p class="menu-story">The dead own the dark. By day, forage the valley and find a place to hide. By night, barricade the doors and listen to them learning your name.</p>
-          <div class="menu-rule"><span></span><b>SHELTERS REMEMBER</b><span></span></div>
-          <p class="menu-warning">Never sleep in the same shelter twice. The dark remembers old ground, and old ground breeds demons.</p>
+          <p class="menu-story">The dead own the dark. By day, forage the valley and find one of its few shelters. By night, barricade the doors and listen to them learning your name. Survivors will walk with you — two at most. Send the rest ahead to hold a roof.</p>
+          <div class="menu-rule"><span></span><b>SHELTERS REMEMBER · TEAM OF TWO</b><span></span></div>
+          <p class="menu-warning">Never sleep in the same shelter twice. The dark remembers old ground, and old ground breeds demons. A companion left in a shelter is never truly safe.</p>
           <div class="menu-actions">
             <button id="startBtn" class="primary-btn" type="button">Start Game</button>
             <div class="best-line">BEST SURVIVAL <b id="bestDays">—</b></div>
