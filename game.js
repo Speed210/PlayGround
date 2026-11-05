@@ -64,9 +64,13 @@
     objective: $('objective'),
     healthFill: $('healthFill'),
     healthText: $('healthText'),
+    levelText: $('levelText'),
+    xpFill: $('xpFill'),
+    statPointsText: $('statPointsText'),
     mapTitle: $('mapTitle'),
     dreadLabel: $('dreadLabel'),
     hauntLabel: $('hauntLabel'),
+    kitBtn: $('kitBtn'),
     muteBtn: $('muteBtn'),
     pauseBtn: $('pauseBtn'),
     woodCount: $('woodCount'),
@@ -74,6 +78,8 @@
     scrapCount: $('scrapCount'),
     weaponTier: $('weaponTier'),
     controlHint: $('controlHint'),
+    turretText: $('turretText'),
+    barrierText: $('barrierText'),
     shelterPanel: $('shelterPanel'),
     shelterName: $('shelterName'),
     shelterPerk: $('shelterPerk'),
@@ -100,6 +106,10 @@
     interactPrompt: $('interactPrompt'),
     interactKey: $('interactKey'),
     interactText: $('interactText'),
+    abilityBar: $('abilityBar'),
+    abilitySlots: $('abilitySlots'),
+    focusFill: $('focusFill'),
+    focusText: $('focusText'),
     toastStack: $('toastStack'),
     centerBanner: $('centerBanner'),
     bannerKicker: $('bannerKicker'),
@@ -118,6 +128,20 @@
     menuScreen: $('menuScreen'),
     bestDays: $('bestDays'),
     startBtn: $('startBtn'),
+    kitScreen: $('kitScreen'),
+    kitCloseBtn: $('kitCloseBtn'),
+    kitBody: $('kitBody'),
+    kitLevel: $('kitLevel'),
+    kitXp: $('kitXp'),
+    kitPoints: $('kitPoints'),
+    kitHint: $('kitHint'),
+    kitPanes: {
+      stats: $('kitStats'),
+      gear: $('kitGear'),
+      spells: $('kitSpells'),
+      build: $('kitBuild'),
+      squad: $('kitSquad')
+    },
     pauseScreen: $('pauseScreen'),
     resumeBtn: $('resumeBtn'),
     pauseRestartBtn: $('pauseRestartBtn'),
@@ -337,6 +361,118 @@
     { short: 'Mk IV', dmg: 72, rate: 0.18, speed: 1140 }
   ];
 
+  /* ---------------------------------------------------------------------
+     Progression data — tiers, stat points, gear, spells, turrets, barriers
+  --------------------------------------------------------------------- */
+  const TIERS = [
+    { id: 'common', label: 'Common', color: '#b9b1a3', mult: 1, scrap: 2 },
+    { id: 'uncommon', label: 'Uncommon', color: '#81ad89', mult: 1.22, scrap: 3 },
+    { id: 'rare', label: 'Rare', color: '#7fa9d0', mult: 1.48, scrap: 5 },
+    { id: 'advanced', label: 'Advanced', color: '#b58ad6', mult: 1.78, scrap: 8 },
+    { id: 'epic', label: 'Epic', color: '#d77fa0', mult: 2.15, scrap: 12 },
+    { id: 'legendary', label: 'Legendary', color: '#e8a34d', mult: 2.6, scrap: 18 },
+    { id: 'god', label: 'God', color: '#ffd970', mult: 3.2, scrap: 28 }
+  ];
+
+  const STAT_DEFS = [
+    { id: 'damage', label: 'Weapon Damage', short: 'DMG', max: 25, desc: 'Bolsters your firearm and every companion shot.', fmt: (v) => `+${v * 8}%` },
+    { id: 'speed', label: 'Movement Speed', short: 'SPD', max: 15, desc: 'Longer strides between the trees.', fmt: (v) => `+${v * 3}%` },
+    { id: 'mastery', label: 'Weapon Mastery', short: 'MST', max: 6, desc: 'Equip one higher gear tier per point.', fmt: (v) => TIERS[clamp(v, 0, 6)].label },
+    { id: 'engineering', label: 'Shelter Engineering', short: 'ENG', max: 20, desc: 'Repairs and fortifications do more work.', fmt: (v) => `+${v * 7}%` },
+    { id: 'binding', label: 'Binding', short: 'BND', max: 20, desc: 'Chance an attacking creature becomes a companion.', fmt: (v) => `+${(v * 2.5).toFixed(1)}%` },
+    { id: 'crit', label: 'Critical Chance', short: 'CRT', max: 20, desc: 'Chance for a shot to strike a vital point.', fmt: (v) => `+${(v * 1.5).toFixed(1)}%` },
+    { id: 'critDmg', label: 'Critical Damage', short: 'CDM', max: 20, desc: 'Extra damage added on critical hits.', fmt: (v) => `+${v * 8}%` },
+    { id: 'turret', label: 'Turret Craft', short: 'TRT', max: 9, desc: 'Unlocks turret patterns and stronger builds.', fmt: (v) => `Rank ${v}` },
+    { id: 'scavenging', label: 'Scavenging', short: 'SCV', max: 20, desc: 'Better supply crates and equipment drops.', fmt: (v) => `+${v * 2}%` }
+  ];
+
+  const EQUIP_SLOTS = [
+    { id: 'weapon', label: 'Weapon', creature: true, kinds: ['Gun', 'Katana'], stats: ['dmg', 'crit', 'critDmg'] },
+    { id: 'helmet', label: 'Helmet', creature: true, stats: ['armor', 'crit', 'hp'] },
+    { id: 'body', label: 'Body Armor', creature: false, stats: ['armor', 'hp', 'dmg'] },
+    { id: 'shoes', label: 'Shoes', creature: true, stats: ['speed', 'armor', 'hp'] },
+    { id: 'gloves', label: 'Gloves', creature: false, stats: ['dmg', 'crit', 'critDmg'] },
+    { id: 'pants', label: 'Pants', creature: false, stats: ['armor', 'hp', 'speed'] },
+    { id: 'ring1', label: 'Ring I', creature: false, stats: ['crit', 'critDmg', 'scav', 'binding'] },
+    { id: 'ring2', label: 'Ring II', creature: false, stats: ['crit', 'critDmg', 'scav', 'binding'] },
+    { id: 'earring1', label: 'Earring I', creature: false, stats: ['binding', 'turret', 'scav', 'engineering'] },
+    { id: 'earring2', label: 'Earring II', creature: false, stats: ['binding', 'turret', 'scav', 'engineering'] }
+  ];
+
+  const GEAR_STAT_LABELS = {
+    dmg: 'DMG', crit: 'CRIT', critDmg: 'CRIT DMG', speed: 'SPD', armor: 'ARMOR',
+    hp: 'VITALITY', scav: 'SCAV', binding: 'BIND', engineering: 'ENG', turret: 'TURRET'
+  };
+
+  const GEAR_WORDS = {
+    weapon: ['Repeater', 'Longrifle', 'Sidearm', 'Carbine', 'Blade', 'Sabre', 'Fang'],
+    helmet: ['Hood', 'Visor', 'Cowl', 'Helm', 'Crown'],
+    body: ['Coat', 'Cuirass', 'Vest', 'Harness', 'Mantle'],
+    shoes: ['Boots', 'Striders', 'Treads', 'Moccasins', 'Greaves'],
+    gloves: ['Grips', 'Gloves', 'Gauntlets', 'Wraps', 'Hands'],
+    pants: ['Trousers', 'Legwraps', 'Breeches', 'Greaves', 'Slacks'],
+    ring1: ['Loop', 'Band', 'Signet', 'Circle'],
+    ring2: ['Loop', 'Band', 'Signet', 'Circle'],
+    earring1: ['Stud', 'Charm', 'Drop', 'Hoop'],
+    earring2: ['Stud', 'Charm', 'Drop', 'Hoop']
+  };
+  const GEAR_PREFIX = ['Weathered', 'Scavenged', 'Riveted', 'Hollow', 'Ashen', 'Moonlit', 'Ironbound', 'Saint\'s', 'Dread', 'Dawnforged'];
+
+  const ABILITIES = [
+    {
+      id: 'ember', key: '1', code: 'Digit1', name: 'Emberlance', kind: 'Offense', unlock: 2, cost: 26, cooldown: 4.5,
+      desc: 'Hurl a burning lance that pierces the dark and sets flesh alight.'
+    },
+    {
+      id: 'ward', key: '2', code: 'Digit2', name: 'Wardlight', kind: 'Defense', unlock: 3, cost: 34, cooldown: 12,
+      desc: 'A halo of old light absorbs damage until it shatters.'
+    },
+    {
+      id: 'frost', key: '3', code: 'Digit3', name: 'Frost Nova', kind: 'Control', unlock: 5, cost: 42, cooldown: 10,
+      desc: 'Freeze the air around you. Nearby creatures slow to a crawl.'
+    },
+    {
+      id: 'titan', key: '4', code: 'Digit4', name: 'Titan Step', kind: 'Superhuman', unlock: 7, cost: 54, cooldown: 18,
+      desc: 'For a few breaths you move faster, hit harder, and shrug off claws.'
+    },
+    {
+      id: 'rally', key: 'Q', code: 'KeyQ', name: 'Rally', kind: 'Support', unlock: 9, cost: 44, cooldown: 16,
+      desc: 'Call every companion home. Heals and steels them for the next wave.'
+    }
+  ];
+
+  const TURRETS = {
+    arrow: { label: 'Arrow Turret', unlock: 0, cost: { wood: 4, stone: 2, scrap: 2 }, dmg: 15, rate: 0.6, range: 370, speed: 780, color: '#d8c08a', desc: 'Cheap, quiet, endlessly useful.' },
+    spear: { label: 'Spear Launcher', unlock: 1, cost: { wood: 5, stone: 3, scrap: 3 }, dmg: 30, rate: 0.9, range: 440, speed: 700, pierce: 2, color: '#c9a46d', desc: 'Heavy bolts punch through a line.' },
+    cannon: { label: 'Cannonball', unlock: 2, cost: { stone: 6, scrap: 5 }, dmg: 44, rate: 1.7, range: 430, speed: 430, splash: 64, color: '#9aa1a0', desc: 'Slow, loud, and unforgiving in a crowd.' },
+    gun: { label: 'Gun Turret', unlock: 3, cost: { scrap: 8, stone: 4 }, dmg: 19, rate: 0.19, range: 400, speed: 1080, color: '#b9c3b0', desc: 'A steady stream of lead.' },
+    seismic: { label: 'Seismic Charge', unlock: 4, cost: { stone: 9, scrap: 7 }, dmg: 38, rate: 2.1, range: 205, aoe: 92, slow: true, color: '#b08f6a', desc: 'Hammers the ground and staggers everything near.' },
+    flame: { label: 'Flamethrower', unlock: 5, cost: { scrap: 9, wood: 4 }, dmg: 13, rate: 0.16, range: 190, cone: true, burn: true, color: '#e07b43', desc: 'A cone of fire that clings.' },
+    tesla: { label: 'Tesla Coil', unlock: 6, cost: { scrap: 12, stone: 5 }, dmg: 30, rate: 1.15, range: 340, chain: 3, color: '#8fd0ff', desc: 'Lightning finds the nearest veins.' },
+    mortar: { label: 'Mortar', unlock: 7, cost: { stone: 12, scrap: 10 }, dmg: 62, rate: 2.6, range: 620, splash: 92, color: '#a58c74', desc: 'Lobs shells over the barricade.' },
+    bfg: { label: 'BFG', unlock: 8, cost: { scrap: 20, stone: 12, wood: 8 }, dmg: 130, rate: 4.2, range: 760, beam: true, color: '#9be86b', desc: 'The last word. It leaves nothing standing.' }
+  };
+
+  const BARRIERS = {
+    barbed: { label: 'Barbed Wire', unlock: 0, cost: { scrap: 3, wood: 1 }, integrity: 18, armor: 0.02, trap: 6, color: '#a8a294', desc: 'Cheap wire. It bites anything that presses close.' },
+    mud: { label: 'Mud Bank', unlock: 1, cost: { wood: 2, stone: 1 }, integrity: 32, armor: 0, trap: 1, slow: 0.62, color: '#8b6d4c', desc: 'Bogs down the horde at the wall.' },
+    wood: { label: 'Wood Wall', unlock: 2, cost: { wood: 6 }, integrity: 72, armor: 0.04, trap: 0, color: '#b07a47', desc: 'Honest timber. Easy to raise, easy to burn.' },
+    stone: { label: 'Stone Wall', unlock: 3, cost: { stone: 7 }, integrity: 112, armor: 0.1, trap: 0, color: '#9aa1a0', desc: 'Heavy blocks that turn claws aside.' },
+    metal: { label: 'Metal Plating', unlock: 4, cost: { scrap: 8, stone: 5 }, integrity: 150, armor: 0.16, trap: 2, reflect: 0.16, color: '#b7c0be', desc: 'Scrap welded into a cruel shell. Hurts attackers back.' },
+    godstone: { label: 'Godstone', unlock: 5, cost: { stone: 12, scrap: 8 }, integrity: 230, armor: 0.24, trap: 10, color: '#ffd970', desc: 'Stone veined with dawnlight. The dark recoils.' }
+  };
+
+  const BARRIER_EFFECTS = {
+    none: { label: 'No Rune', cost: {}, color: '#8b877c', desc: 'Leave the barrier unwarded.' },
+    poison: { label: 'Poison Gas', cost: { scrap: 3 }, color: '#8fd36b', dot: 7, desc: 'Creatures that strike the wall are poisoned.' },
+    shock: { label: 'Electricity', cost: { scrap: 4 }, color: '#8fd0ff', zap: 14, desc: 'The wall discharges into everyone nearby.' },
+    fire: { label: 'Fire', cost: { wood: 2, scrap: 2 }, color: '#ff9a4f', dot: 9, desc: 'Burning pitch clings to attackers.' },
+    freeze: { label: 'Freeze', cost: { stone: 2, scrap: 3 }, color: '#9bdcff', slow: 0.35, desc: 'A cold rune slows everything at the wall.' },
+    heal: { label: 'Healing Aura', cost: { wood: 3, stone: 2 }, color: '#9be8a8', heal: 3.2, desc: 'Mends you and your companions while you hold.' }
+  };
+
+  const ENEMY_ROLE = { walker: 'hunter', crawler: 'scout', brute: 'engineer', wraith: 'medic' };
+
   const ROLES = {
     scout: { label: 'Scout', hp: 72, dmg: 17, rate: 0.65, range: 370, speed: 156, color: '#8fb7c4', perk: 'Fast, sharp-eyed, quick to fire.' },
     hunter: { label: 'Hunter', hp: 92, dmg: 31, rate: 1.05, range: 405, speed: 126, color: '#d59a5f', perk: 'Heavy rifle. Hits like a closing door.' },
@@ -393,7 +529,9 @@
         haunt: 0,
         breached: false,
         collapsed: false,
-        hit: 0
+        hit: 0,
+        turret: null,
+        barrier: null
       }
     };
   }
@@ -508,10 +646,27 @@
   --------------------------------------------------------------------- */
   const player = {
     x: 700, y: 792, r: 14, speed: 190, aim: -Math.PI / 2,
-    invuln: 0, hitFlash: 0, walk: 0, moving: false
+    invuln: 0, hitFlash: 0, walk: 0, moving: false,
+    shield: 0, shieldHp: 0, titan: 0
   };
 
   const camera = { x: player.x, y: player.y };
+
+  function emptyStats() {
+    const s = {};
+    STAT_DEFS.forEach((d) => { s[d.id] = 0; });
+    return s;
+  }
+
+  function emptyEquipment() {
+    const e = {};
+    EQUIP_SLOTS.forEach((s) => { e[s.id] = null; });
+    return e;
+  }
+
+  function emptyCompanionEquipment() {
+    return { weapon: null, shoes: null, helmet: null };
+  }
 
   const game = {
     mode: 'menu',
@@ -527,6 +682,25 @@
     best: loadBest(),
     resources: { wood: 0, stone: 0, scrap: 0 },
     weaponTier: 1,
+    level: 1,
+    xp: 0,
+    xpNext: 18,
+    totalXp: 0,
+    statPoints: 0,
+    stats: emptyStats(),
+    equipment: emptyEquipment(),
+    inventory: [],
+    supplies: [],
+    beams: [],
+    focus: 100,
+    maxFocus: 100,
+    abilityCooldowns: {},
+    supplyTimer: 22,
+    buildTurretType: 'arrow',
+    buildBarrierType: 'wood',
+    buildBarrierEffect: 'none',
+    lastAbilitySig: '',
+    kitTab: 'stats',
     activeShelter: null,
     panelShelter: null,
     prompt: null,
@@ -574,6 +748,8 @@
       s.state.breached = false;
       s.state.collapsed = false;
       s.state.hit = 0;
+      s.state.turret = null;
+      s.state.barrier = null;
     }
   }
 
@@ -600,6 +776,25 @@
     game.resources.stone = 0;
     game.resources.scrap = 0;
     game.weaponTier = 1;
+    game.level = 1;
+    game.xp = 0;
+    game.xpNext = 18;
+    game.totalXp = 0;
+    game.statPoints = 0;
+    game.stats = emptyStats();
+    game.equipment = emptyEquipment();
+    game.inventory.length = 0;
+    game.supplies.length = 0;
+    game.beams.length = 0;
+    game.focus = 100;
+    game.maxFocus = 100;
+    game.abilityCooldowns = {};
+    game.supplyTimer = 22;
+    game.buildTurretType = 'arrow';
+    game.buildBarrierType = 'wood';
+    game.buildBarrierEffect = 'none';
+    game.lastAbilitySig = '';
+    game.kitTab = 'stats';
     game.activeShelter = null;
     game.panelShelter = null;
     game.prompt = null;
@@ -633,6 +828,11 @@
     player.hitFlash = 0;
     player.walk = 0;
     player.moving = false;
+    player.shield = 0;
+    player.shieldHp = 0;
+    player.titan = 0;
+    game.maxHealth = playerMaxHealth();
+    game.health = game.maxHealth;
     camera.x = player.x;
     camera.y = player.y;
     spawnWildCompanions(4);
