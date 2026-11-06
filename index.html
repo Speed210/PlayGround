@@ -57,6 +57,12 @@
       </section>
 
       <div class="sys-buttons">
+        <button id="menuBtn" class="sys-btn" type="button" aria-label="Open menu" title="Menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v2.4H3zm0 5.8h18v2.4H3zm0 5.8h18V19H3z"></path></svg>
+        </button>
+        <button id="mobileBtn" class="sys-btn" type="button" aria-label="Toggle mobile controls" title="Mobile mode">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 3v13h10V5H7zm4 15h2v1h-2z"></path></svg>
+        </button>
         <button id="kitBtn" class="sys-btn kit-btn" type="button" aria-label="Open field kit" title="Field Kit (C)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.5 6.7L21 11l-6.5 2.3L12 20l-2.5-6.7L3 11l6.5-2.3z"></path></svg>
         </button>
@@ -164,6 +170,16 @@
         <small id="bannerSub">They are coming.</small>
       </div>
 
+      <div id="bossBar" class="boss-bar" hidden aria-label="Anomaly threat">
+        <div class="boss-head">
+          <span id="bossTag">SCP-682</span>
+          <b id="bossName">HARD-TO-DESTROY REPTILE</b>
+          <span id="bossPhase">PHASE I</span>
+        </div>
+        <div class="boss-track"><i id="bossFill"></i></div>
+        <div class="boss-sub" id="bossSub">It has already survived everything you have.</div>
+      </div>
+
       <div id="mobileControls" aria-label="Touch controls">
         <div id="joystick" class="joystick">
           <div class="stick-base">
@@ -182,22 +198,27 @@
     <!-- MAIN MENU -->
     <section id="menuScreen" class="screen menu-screen" aria-label="Main menu">
       <div class="menu-scrim"></div>
+      <div class="menu-window-controls" aria-label="Menu window controls">
+        <button id="menuMinBtn" class="menu-window-btn" type="button" title="Minimize menu" aria-label="Minimize menu">—</button>
+        <button id="menuCloseBtn" class="menu-window-btn close" type="button" title="Close menu" aria-label="Close menu">✕</button>
+      </div>
       <div class="menu-layout">
         <div class="menu-content">
           <div class="menu-kicker"><i></i>A SURVIVAL TALE<i></i></div>
           <h1 class="title">NIGHT<span>FALL</span></h1>
-          <p class="menu-tagline">Keep moving. Keep the fire alive.</p>
-          <p class="menu-story">The dead own the dark. By day, scavenge the valley and choose one of its few shelters. By night, rebuild its barricade, patch what the creatures break, and hold until dawn. Survivors will walk with you — two at most. Send the rest ahead to hold a roof.</p>
-          <div class="menu-rule"><span></span><b>SHELTERS REMEMBER · TEAM OF TWO</b><span></span></div>
-          <p class="menu-warning">Never sleep in the same shelter twice. The dark remembers old ground, and old ground breeds demons. A companion left in a shelter is never truly safe.</p>
+          <p class="menu-tagline">Seven nights. Seven anomalies. One way out.</p>
+          <p class="menu-story">The Foundation calls this region a containment failure. You call it home. By day, scavenge the valley and fortify one of its shelters. By night, hold the barricade, protect your companions, and survive whatever the dark sends. On the seventh night, something ancient wakes — and it does not stay dead.</p>
+          <div class="menu-rule"><span></span><b>FORTIFY · SURVIVE · CROSS THE BORDER</b><span></span></div>
+          <p class="menu-warning">SCP-173 moves when you blink. SCP-096 will not stop. SCP-106 walks through walls. SCP-682 has survived every attempt to kill it. Enter a shelter for cover — but a shelter is only as strong as its barricade.</p>
           <div class="menu-actions">
             <button id="startBtn" class="primary-btn" type="button">Start Game</button>
+            <button id="menuMobileBtn" class="ghost-btn menu-mobile-btn" type="button">Mobile Mode</button>
             <div class="best-line">BEST SURVIVAL <b id="bestDays">—</b></div>
           </div>
           <div class="menu-controls">
             <span><kbd>WASD</kbd> move</span>
             <span><kbd>MOUSE</kbd> aim · fire</span>
-            <span><kbd>E</kbd> use</span>
+            <span><kbd>E</kbd> use · enter shelter</span>
             <span><kbd>R</kbd> repair</span>
             <span><kbd>C</kbd> field kit</span>
             <span><kbd>1–4</kbd> spells</span>
@@ -212,8 +233,13 @@
           <p>“When the sun drops, do not be caught in the open. If they cannot reach you, they will take the walls apart with their hands.”</p>
         </div>
       </div>
-      <div class="menu-foot">A game of one more night · Headphones recommended</div>
+      <div class="menu-foot">A game of seven nights · Headphones recommended</div>
     </section>
+
+    <button id="menuDock" class="menu-dock hidden" type="button" aria-label="Reopen menu">
+      <span class="dock-mark">✦</span>
+      <span class="dock-copy"><b>NIGHTFALL</b><small>MENU</small></span>
+    </button>
 
     <!-- FIELD KIT -->
     <section id="kitScreen" class="screen kit-screen hidden" aria-label="Field kit">
@@ -281,6 +307,30 @@
           <button id="continueBtn" class="primary-btn" type="button">Break Camp</button>
         </div>
         <div class="screen-hint">Continuing in <span id="dawnCountdown">9</span>s · Enter to continue</div>
+      </div>
+    </section>
+
+    <!-- CHAPTER COMPLETE -->
+    <section id="chapterScreen" class="screen overlay-screen chapter-screen" aria-label="Chapter complete">
+      <div class="screen-card chapter-card">
+        <div class="screen-kicker" id="chapterKicker">CHAPTER I COMPLETE</div>
+        <h2 id="chapterTitle">The Valley is behind you.</h2>
+        <p id="chapterText">Seven nights survived. The containment line is broken. A new region waits beyond the dark.</p>
+        <div class="chapter-banner">
+          <span>NEXT REGION</span>
+          <b id="chapterNextRegion">SIERRA MUERTA · MEXICO</b>
+          <small id="chapterNextNote">Arid ground. Adobe walls. The heat hides things that do not breathe.</small>
+        </div>
+        <div class="stat-grid">
+          <div><span>NIGHTS HELD</span><b id="chapterNights">7</b></div>
+          <div><span>ANOMALIES DOWN</span><b id="chapterKills">0</b></div>
+          <div><span>BOSSES</span><b id="chapterBosses">1</b></div>
+          <div><span>VITALITY</span><b id="chapterHealth">100</b></div>
+        </div>
+        <div class="screen-actions">
+          <button id="chapterBtn" class="primary-btn" type="button">Travel to Mexico</button>
+        </div>
+        <div class="screen-hint">Your gear, companions and supplies travel with you.</div>
       </div>
     </section>
 

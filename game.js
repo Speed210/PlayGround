@@ -73,6 +73,8 @@
     kitBtn: $('kitBtn'),
     muteBtn: $('muteBtn'),
     pauseBtn: $('pauseBtn'),
+    menuBtn: $('menuBtn'),
+    mobileBtn: $('mobileBtn'),
     woodCount: $('woodCount'),
     stoneCount: $('stoneCount'),
     scrapCount: $('scrapCount'),
