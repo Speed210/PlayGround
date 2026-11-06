@@ -1268,6 +1268,17 @@ canvas {
 
 /* Menu */
 
+.menu-toggle-input {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 .menu-screen {
   background:
     radial-gradient(ellipse at 72% 60%, transparent 0%, rgba(7, 11, 19, 0.15) 42%, rgba(7, 11, 19, 0.78) 100%),
