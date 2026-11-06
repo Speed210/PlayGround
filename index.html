@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#070b13">
-  <meta name="description" content="Nightfall — a survival game of shelter, firelight, and things that learn where you hide.">
-  <title>Nightfall — Keep Moving</title>
+  <meta name="description" content="Nightfall — an SCP containment survival game. Hold the shelter, survive seven nights, and face what waits on the seventh.">
+  <title>Nightfall — Containment Protocol</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070b13'/%3E%3Ccircle cx='32' cy='32' r='13' fill='%23efb661'/%3E%3Cpath d='M32 8l4 18 18 6-18 6-4 18-4-18-18-6 18-6z' fill='%23f4e4c4'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -32,7 +32,7 @@
           <span class="timeline-glow" id="timeGlow"></span>
         </div>
         <div class="time-row">
-          <span id="timeLeft">Nightfall in 1:10</span>
+          <span id="timeLeft">Nightfall in 1:15</span>
           <span id="objective" class="objective">Find shelter</span>
         </div>
         <div class="vital-row">
@@ -40,14 +40,14 @@
           <div class="vital-track"><i id="healthFill"></i></div>
           <b id="healthText">100</b>
         </div>
-        <div class="xp-row">
-          <span id="levelText" class="level-chip">LV 1</span>
-          <div class="xp-track"><i id="xpFill"></i></div>
-          <b id="statPointsText" class="stat-points">0 SP</b>
+        <div class="status-chips">
+          <span id="safeChip" class="safe-chip" hidden>◈ INSIDE · PROTECTED</span>
+          <span id="bossChip" class="boss-chip" hidden>BOSS NIGHT</span>
+          <span id="mobileChip" class="mobile-chip" hidden>MOBILE</span>
         </div>
       </section>
 
-      <section class="map-panel glass" aria-label="Valley map">
+      <section class="map-panel glass" aria-label="Region map">
         <div class="map-head"><span id="mapTitle">CH. I · THE VALLEY</span><i class="live-dot"></i></div>
         <canvas id="minimap" width="200" height="132"></canvas>
         <div class="map-foot">
@@ -57,8 +57,8 @@
       </section>
 
       <div class="sys-buttons">
-        <button id="kitBtn" class="sys-btn kit-btn" type="button" aria-label="Open field kit" title="Field Kit (C)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.5 6.7L21 11l-6.5 2.3L12 20l-2.5-6.7L3 11l6.5-2.3z"></path></svg>
+        <button id="kitBtn" class="sys-btn kit-btn" type="button" aria-label="Open SCP field guide" title="SCP Field Guide (G)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11a3 3 0 0 1 3 3v15H8a3 3 0 0 1-3-3V3zm2 2v13a1 1 0 0 0 1 1h9V6a1 1 0 0 0-1-1H7zm2 3h6v1.6H9V8zm0 3.2h6v1.6H9v-1.6z"></path></svg>
         </button>
         <button id="muteBtn" class="sys-btn" type="button" aria-label="Toggle sound" title="Mute (M)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2-3.74v7.48A4.5 4.5 0 0 0 16.5 12z"/></svg>
@@ -77,7 +77,7 @@
       <div id="weaponBox" class="weapon-box glass" aria-label="Weapon">
         <div class="weapon-title">REVOLVER <span id="weaponTier">Mk I</span></div>
         <div class="weapon-sub">Unlimited rounds · hold to fire</div>
-        <div id="controlHint" class="control-hint">WASD move · Mouse aim · E use · R repair · C kit · 1–4 spells · Q rally · T turret · B barrier · P pause</div>
+        <div id="controlHint" class="control-hint">WASD move · Mouse aim · E enter / use · R repair · G guide · P pause</div>
       </div>
 
       <aside id="shelterPanel" class="shelter-panel glass" aria-label="Shelter">
@@ -132,6 +132,16 @@
         </button>
       </aside>
 
+      <div id="bossBar" class="boss-bar glass" hidden>
+        <div class="boss-head">
+          <span class="boss-tag">CONTAINMENT BREACH</span>
+          <b id="bossName">SCP-682</b>
+          <span id="bossPhase" class="boss-phase">PHASE I</span>
+        </div>
+        <div class="boss-track"><i id="bossFill"></i></div>
+        <div class="boss-sub" id="bossSub">THE HARD-TO-DESTROY REPTILE · NIGHT 7</div>
+      </div>
+
       <section id="teamPanel" class="team-panel glass" aria-label="Companions">
         <div class="team-head">
           <span>COMPANIONS</span>
@@ -145,15 +155,6 @@
       <div id="interactPrompt" class="interact-prompt glass" hidden>
         <kbd id="interactKey">E</kbd>
         <span id="interactText">Gather wood</span>
-      </div>
-
-      <div id="abilityBar" class="ability-bar glass" aria-label="Abilities">
-        <div class="focus-row">
-          <span>FOCUS</span>
-          <div class="focus-track"><i id="focusFill"></i></div>
-          <b id="focusText">100</b>
-        </div>
-        <div id="abilitySlots" class="ability-slots"></div>
       </div>
 
       <div id="toastStack" class="toast-stack" aria-live="polite"></div>
@@ -182,85 +183,93 @@
     <!-- MAIN MENU -->
     <section id="menuScreen" class="screen menu-screen" aria-label="Main menu">
       <div class="menu-scrim"></div>
+      <div class="window-controls" aria-label="Menu window controls">
+        <button id="menuMinBtn" class="window-btn" type="button" title="Minimize menu" aria-label="Minimize menu">—</button>
+        <button id="menuCloseBtn" class="window-btn close" type="button" title="Close menu" aria-label="Close menu">✕</button>
+      </div>
       <div class="menu-layout">
         <div class="menu-content">
-          <div class="menu-kicker"><i></i>A SURVIVAL TALE<i></i></div>
+          <div class="menu-kicker"><i></i>ANOMALOUS SURVIVAL TALE<i></i></div>
           <h1 class="title">NIGHT<span>FALL</span></h1>
-          <p class="menu-tagline">Keep moving. Keep the fire alive.</p>
-          <p class="menu-story">The dead own the dark. By day, scavenge the valley and choose one of its few shelters. By night, rebuild its barricade, patch what the creatures break, and hold until dawn. Survivors will walk with you — two at most. Send the rest ahead to hold a roof.</p>
-          <div class="menu-rule"><span></span><b>SHELTERS REMEMBER · TEAM OF TWO</b><span></span></div>
-          <p class="menu-warning">Never sleep in the same shelter twice. The dark remembers old ground, and old ground breeds demons. A companion left in a shelter is never truly safe.</p>
+          <p class="menu-tagline">Seven nights. Six shelters. One thing that will not die.</p>
+          <p class="menu-story">The Foundation lost the valley years ago. By day, scavenge and fortify a shelter. By night, hold the barricade while SCPs test every seam. Step inside to stay hidden — but walls fail, and the dark remembers old ground. On the seventh night, <b>SCP-682</b> wakes.</p>
+          <div class="menu-rule"><span></span><b>SHELTERS REMEMBER · TEAM OF TWO · SEVEN-NIGHT CHAPTERS</b><span></span></div>
+          <p class="menu-warning">Never sleep in the same shelter twice. Old ground breeds stronger anomalies. A companion left behind is never truly safe.</p>
           <div class="menu-actions">
-            <button id="startBtn" class="primary-btn" type="button">Start Game</button>
+            <button id="startBtn" class="primary-btn" type="button">Begin Containment</button>
             <div class="best-line">BEST SURVIVAL <b id="bestDays">—</b></div>
+          </div>
+          <div class="menu-actions secondary">
+            <button id="mobileToggle" class="ghost-btn mobile-toggle" type="button" aria-pressed="false">
+              <span class="mt-icon">▤</span><span id="mobileToggleText">Mobile Mode: Off</span>
+            </button>
+            <button id="guideBtn" class="ghost-btn" type="button">SCP Field Guide</button>
           </div>
           <div class="menu-controls">
             <span><kbd>WASD</kbd> move</span>
             <span><kbd>MOUSE</kbd> aim · fire</span>
-            <span><kbd>E</kbd> use</span>
+            <span><kbd>E</kbd> enter / use</span>
             <span><kbd>R</kbd> repair</span>
-            <span><kbd>C</kbd> field kit</span>
-            <span><kbd>1–4</kbd> spells</span>
-            <span><kbd>Q</kbd> rally</span>
-            <span><kbd>T</kbd> turret</span>
-            <span><kbd>B</kbd> barrier</span>
+            <span><kbd>G</kbd> guide</span>
             <span><kbd>ESC</kbd> pause</span>
           </div>
         </div>
         <div class="menu-aside">
-          <div class="aside-stamp">FIELD NOTES<br><b>NO. 07</b></div>
-          <p>“When the sun drops, do not be caught in the open. If they cannot reach you, they will take the walls apart with their hands.”</p>
+          <div class="aside-stamp">CONTAINMENT LOG<br><b>NO. 07</b></div>
+          <p>“The statue moves when the light leaves. The shy one only wants to be seen. The old man walks through walls. None of them stay dead.”</p>
+          <div class="chapter-roadmap">
+            <div class="cr-item active"><span>I</span><b>THE VALLEY</b><small>USA · PINE &amp; RAIN</small></div>
+            <div class="cr-item"><span>II</span><b>SIERRA SOMBRA</b><small>MEXICO · DESERT &amp; DUST</small></div>
+            <div class="cr-item"><span>III</span><b>YUREI NO MORI</b><small>JAPAN · BAMBOO &amp; MIST</small></div>
+          </div>
         </div>
       </div>
       <div class="menu-foot">A game of one more night · Headphones recommended</div>
     </section>
 
-    <!-- FIELD KIT -->
-    <section id="kitScreen" class="screen kit-screen hidden" aria-label="Field kit">
-      <div class="kit-card">
-        <header class="kit-head">
+    <button id="menuDock" class="menu-dock" type="button" hidden aria-label="Restore menu">
+      <span class="dock-mark">✦</span><span>NIGHTFALL</span><small>OPEN MENU</small>
+    </button>
+
+    <button id="pauseDock" class="menu-dock pause-dock" type="button" hidden aria-label="Restore pause menu">
+      <span class="dock-mark">▮▮</span><span>PAUSED</span><small>RESUME</small>
+    </button>
+
+    <!-- SCP FIELD GUIDE -->
+    <section id="guideScreen" class="screen guide-screen hidden" aria-label="SCP field guide">
+      <div class="guide-card">
+        <header class="guide-head">
           <div>
-            <div class="screen-kicker">FIELD KIT</div>
-            <h2>Progress &amp; Loadout</h2>
+            <div class="screen-kicker">FOUNDATION ARCHIVE</div>
+            <h2>SCP Field Guide</h2>
           </div>
-          <div class="kit-level">
-            <b id="kitLevel">LV 1</b>
-            <span id="kitXp">0 / 18 XP</span>
-          </div>
-          <button id="kitCloseBtn" class="sys-btn kit-close" type="button" aria-label="Close field kit" title="Close (C)">✕</button>
+          <button id="guideCloseBtn" class="sys-btn kit-close" type="button" aria-label="Close field guide" title="Close (G)">✕</button>
         </header>
-        <div class="kit-summary">
-          <span id="kitPoints" class="kit-points">0 stat points</span>
-          <span id="kitHint" class="kit-hint">C closes · spend points in Stats</span>
-        </div>
-        <nav class="kit-tabs" aria-label="Field kit sections">
-          <button type="button" data-kit-tab="stats" class="active">Stats</button>
-          <button type="button" data-kit-tab="gear">Gear</button>
-          <button type="button" data-kit-tab="spells">Spells</button>
-          <button type="button" data-kit-tab="build">Build</button>
-          <button type="button" data-kit-tab="squad">Squad</button>
-        </nav>
-        <div id="kitBody" class="kit-body">
-          <div id="kitStats" class="kit-pane active"></div>
-          <div id="kitGear" class="kit-pane"></div>
-          <div id="kitSpells" class="kit-pane"></div>
-          <div id="kitBuild" class="kit-pane"></div>
-          <div id="kitSquad" class="kit-pane"></div>
-        </div>
+        <div id="guideBody" class="guide-body"></div>
+        <footer class="guide-foot">
+          <span>Threat ratings are estimates. Survival is not guaranteed.</span>
+          <button id="guideMobileBtn" class="ghost-btn" type="button">Toggle Mobile Mode</button>
+        </footer>
       </div>
     </section>
 
     <!-- PAUSE -->
     <section id="pauseScreen" class="screen overlay-screen" aria-label="Paused">
+      <div class="window-controls pause-controls" aria-label="Pause window controls">
+        <button id="pauseMinBtn" class="window-btn" type="button" title="Minimize pause" aria-label="Minimize pause">—</button>
+        <button id="pauseCloseBtn" class="window-btn close" type="button" title="Resume" aria-label="Resume">✕</button>
+      </div>
       <div class="screen-card compact">
         <div class="screen-kicker">THE DARK WAITS</div>
         <h2>Paused</h2>
         <p>Take a breath. The night will keep.</p>
         <div class="screen-actions">
           <button id="resumeBtn" class="primary-btn" type="button">Resume</button>
+          <button id="pauseGuideBtn" class="ghost-btn" type="button">Field Guide</button>
           <button id="pauseRestartBtn" class="ghost-btn" type="button">Restart Run</button>
+          <button id="pauseMenuBtn" class="ghost-btn" type="button">Main Menu</button>
         </div>
-        <div class="screen-hint">Esc to resume · M to toggle sound</div>
+        <div class="screen-hint">Esc to resume · M to toggle sound · G for field guide</div>
       </div>
     </section>
 
@@ -269,7 +278,7 @@
       <div class="screen-card dawn-card">
         <div class="screen-kicker">THE SUN RETURNS</div>
         <h2 id="dawnTitle">Dawn breaks.</h2>
-        <p id="dawnText">You survived the night. The valley is quiet again — but not for long.</p>
+        <p id="dawnText">You survived the night. The region is quiet again — but not for long.</p>
         <div class="stat-grid">
           <div><span>NIGHT</span><b id="dawnNight">1</b></div>
           <div><span>KILLS</span><b id="dawnKills">0</b></div>
@@ -284,6 +293,31 @@
       </div>
     </section>
 
+    <!-- CHAPTER COMPLETE -->
+    <section id="chapterScreen" class="screen overlay-screen chapter-screen" aria-label="Chapter complete">
+      <div class="screen-card chapter-card">
+        <div class="screen-kicker">SEVEN NIGHTS COMPLETE</div>
+        <h2>Chapter <span id="chapterRoman">I</span> contained.</h2>
+        <p id="chapterText">SCP-682 has been driven back. The region is scarred, but the road continues.</p>
+        <div class="chapter-next">
+          <span class="cn-kicker">NEXT CHAPTER</span>
+          <b id="nextChapterName">SIERRA SOMBRA</b>
+          <small id="nextChapterSub">Sonoran Desert · Mexico</small>
+          <p id="nextChapterDesc">Heat, dust, and something old beneath the sand.</p>
+        </div>
+        <div class="stat-grid">
+          <div><span>NIGHTS HELD</span><b id="chapterNights">7</b></div>
+          <div><span>SCP KILLS</span><b id="chapterKills">0</b></div>
+          <div><span>COMPANIONS</span><b id="chapterTeam">0</b></div>
+          <div><span>CHAPTER</span><b id="chapterCount">1 / 3</b></div>
+        </div>
+        <div class="screen-actions">
+          <button id="chapterBtn" class="primary-btn" type="button">Travel to Next Region</button>
+        </div>
+        <div class="screen-hint">Enter to continue · Your gear and supplies travel with you</div>
+      </div>
+    </section>
+
     <!-- GAME OVER -->
     <section id="gameoverScreen" class="screen overlay-screen death-screen" aria-label="Game over">
       <div class="screen-card death-card">
@@ -293,12 +327,13 @@
         <div class="stat-grid">
           <div><span>DAYS SURVIVED</span><b id="deathDays">0</b></div>
           <div><span>NIGHTS HELD</span><b id="deathNights">0</b></div>
-          <div><span>CREATURES KILLED</span><b id="deathKills">0</b></div>
+          <div><span>SCPs KILLED</span><b id="deathKills">0</b></div>
           <div><span>BEST RUN</span><b id="deathBest">0</b></div>
         </div>
         <p id="deathAdvice" class="death-advice">Stay light. Move at first light. Never let them learn one place too well.</p>
         <div class="screen-actions">
           <button id="retryBtn" class="primary-btn" type="button">Try Again</button>
+          <button id="deathMenuBtn" class="ghost-btn" type="button">Main Menu</button>
         </div>
         <div class="screen-hint">There is always one more night.</div>
       </div>
