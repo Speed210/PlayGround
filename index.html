@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#070b13">
-  <meta name="description" content="Nightfall — a survival game of shelter, firelight, and things that learn where you hide.">
-  <title>Nightfall — Keep Moving</title>
+  <meta name="description" content="Nightfall: Containment — an SCP survival game of shelter, firelight, and things that learn where you hide.">
+  <title>Nightfall: Containment — Keep Moving</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070b13'/%3E%3Ccircle cx='32' cy='32' r='13' fill='%23efb661'/%3E%3Cpath d='M32 8l4 18 18 6-18 6-4 18-4-18-18-6 18-6z' fill='%23f4e4c4'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -57,6 +57,9 @@
       </section>
 
       <div class="sys-buttons">
+        <button id="hudMenuBtn" class="sys-btn menu-btn" type="button" aria-label="Open main menu" title="Main menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"></path></svg>
+        </button>
         <button id="kitBtn" class="sys-btn kit-btn" type="button" aria-label="Open field kit" title="Field Kit (C)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.5 6.7L21 11l-6.5 2.3L12 20l-2.5-6.7L3 11l6.5-2.3z"></path></svg>
         </button>
@@ -105,9 +108,15 @@
         </div>
         <div id="hauntWarning" class="haunt-warning" hidden>
           <span class="warn-mark">!</span>
-          <span id="hauntWarningText">The dark remembers this place. Return and demons will rise.</span>
+          <span id="hauntWarningText">The dark remembers this place. Return and the breach will deepen.</span>
         </div>
         <button id="claimBtn" class="claim-btn" type="button">Claim Shelter <kbd>E</kbd></button>
+        <button id="shelterEnterBtn" class="enter-btn" type="button" hidden>Enter Shelter <kbd>E</kbd></button>
+        <button id="recallResidentBtn" class="enter-btn leave" type="button" hidden>Call Resident to Your Side</button>
+        <div id="insideGuard" class="inside-guard" hidden>
+          <span class="inside-pulse"></span>
+          <div><b>INSIDE</b><small>The walls are between you and them. For now.</small></div>
+        </div>
         <div id="fortGrid" class="fort-grid">
           <button class="fort-btn" type="button" data-action="fortify">
             <span class="fort-top"><i class="res-dot wood"></i><b>Barricade</b><em id="fortifyCost">3</em></span>
@@ -147,6 +156,13 @@
         <span id="interactText">Gather wood</span>
       </div>
 
+      <div id="insideBanner" class="inside-banner glass" hidden>
+        <i class="inside-dot"></i>
+        <span>INSIDE</span>
+        <b id="insideBannerName">Ranger's Hut</b>
+        <em>PROTECTED</em>
+      </div>
+
       <div id="abilityBar" class="ability-bar glass" aria-label="Abilities">
         <div class="focus-row">
           <span>FOCUS</span>
@@ -182,22 +198,32 @@
     <!-- MAIN MENU -->
     <section id="menuScreen" class="screen menu-screen" aria-label="Main menu">
       <div class="menu-scrim"></div>
+      <div class="menu-chrome" aria-hidden="true">
+        <span class="menu-chrome-dots"><i></i><i></i><i></i></span>
+        <span class="menu-chrome-title">SITE-19 // SURVIVAL TERMINAL</span>
+        <span class="menu-chrome-status"><i></i> SIGNAL LOST</span>
+      </div>
+      <div class="menu-window-btns">
+        <button id="menuMinBtn" class="window-btn" type="button" aria-label="Minimize menu" title="Minimize menu">—</button>
+        <button id="menuCloseBtn" class="window-btn close" type="button" aria-label="Close menu" title="Close menu">✕</button>
+      </div>
       <div class="menu-layout">
         <div class="menu-content">
-          <div class="menu-kicker"><i></i>A SURVIVAL TALE<i></i></div>
+          <div class="menu-kicker"><i></i>CONTAINMENT BREACH · SURVIVAL PROTOCOL<i></i></div>
           <h1 class="title">NIGHT<span>FALL</span></h1>
-          <p class="menu-tagline">Keep moving. Keep the fire alive.</p>
-          <p class="menu-story">The dead own the dark. By day, scavenge the valley and choose one of its few shelters. By night, rebuild its barricade, patch what the creatures break, and hold until dawn. Survivors will walk with you — two at most. Send the rest ahead to hold a roof.</p>
-          <div class="menu-rule"><span></span><b>SHELTERS REMEMBER · TEAM OF TWO</b><span></span></div>
-          <p class="menu-warning">Never sleep in the same shelter twice. The dark remembers old ground, and old ground breeds demons. A companion left in a shelter is never truly safe.</p>
+          <p class="menu-tagline">The Foundation is gone. The dark is not.</p>
+          <p class="menu-story">Site-19 has fallen. Six safehouses remain in the valley, and every one of them is being watched. Scavenge by day. Claim a roof, barricade the doors, and get <b>inside</b> before nightfall — the walls are the only thing between you and the things that got out.</p>
+          <div class="menu-rule"><span></span><b>SCPs REMEMBER · SHELTERS ARE NOT FOREVER</b><span></span></div>
+          <p class="menu-warning">SCP-173 moves when you look away. SCP-096 wakes when you stare. SCP-106 walks through walls. Every shelter remembers the last person who hid inside it.</p>
           <div class="menu-actions">
             <button id="startBtn" class="primary-btn" type="button">Start Game</button>
+            <button id="resumeMenuBtn" class="ghost-btn menu-resume" type="button" hidden>Resume Run</button>
             <div class="best-line">BEST SURVIVAL <b id="bestDays">—</b></div>
           </div>
           <div class="menu-controls">
             <span><kbd>WASD</kbd> move</span>
             <span><kbd>MOUSE</kbd> aim · fire</span>
-            <span><kbd>E</kbd> use</span>
+            <span><kbd>E</kbd> enter shelter</span>
             <span><kbd>R</kbd> repair</span>
             <span><kbd>C</kbd> field kit</span>
             <span><kbd>1–4</kbd> spells</span>
@@ -209,11 +235,25 @@
         </div>
         <div class="menu-aside">
           <div class="aside-stamp">FIELD NOTES<br><b>NO. 07</b></div>
+          <div class="scp-index">
+            <div class="scp-index-head"><i></i>SCP THREAT INDEX</div>
+            <div class="scp-entry"><b>SCP-173</b><span>The Sculpture · moves when unseen</span></div>
+            <div class="scp-entry"><b>SCP-096</b><span>Shy Guy · enrages when observed</span></div>
+            <div class="scp-entry"><b>SCP-049</b><span>Plague Doctor · mends the outbreak</span></div>
+            <div class="scp-entry"><b>SCP-106</b><span>The Old Man · ignores walls</span></div>
+            <div class="scp-entry"><b>SCP-939</b><span>With Many Voices · pack hunter</span></div>
+            <div class="scp-entry"><b>SCP-682</b><span>Reptile · regenerates. Do not engage.</span></div>
+          </div>
           <p>“When the sun drops, do not be caught in the open. If they cannot reach you, they will take the walls apart with their hands.”</p>
         </div>
       </div>
       <div class="menu-foot">A game of one more night · Headphones recommended</div>
     </section>
+    <button id="menuDock" class="menu-dock hidden" type="button" aria-label="Reopen menu">
+      <span class="dock-mark">▣</span>
+      <span id="menuDockLabel">NIGHTFALL</span>
+      <i>OPEN MENU</i>
+    </button>
 
     <!-- FIELD KIT -->
     <section id="kitScreen" class="screen kit-screen hidden" aria-label="Field kit">
@@ -258,6 +298,7 @@
         <p>Take a breath. The night will keep.</p>
         <div class="screen-actions">
           <button id="resumeBtn" class="primary-btn" type="button">Resume</button>
+          <button id="pauseMenuBtn" class="ghost-btn" type="button">Main Menu</button>
           <button id="pauseRestartBtn" class="ghost-btn" type="button">Restart Run</button>
         </div>
         <div class="screen-hint">Esc to resume · M to toggle sound</div>
