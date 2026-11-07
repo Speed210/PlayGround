@@ -17,11 +17,15 @@
     <div id="healFlash" aria-hidden="true"></div>
 
     <div id="hud" aria-hidden="false">
-      <section class="status-panel glass" aria-label="Status">
+      <section id="statusPanel" class="status-panel glass" aria-label="Status">
         <div class="brand-row">
           <span class="brand-mark">✦</span>
           <span class="brand-name">NIGHTFALL</span>
           <span id="bestBadge" class="best-badge">BEST —</span>
+          <span class="panel-ctl">
+            <button id="statusMinBtn" class="panel-btn" type="button" aria-label="Minimize status panel" title="Minimize">–</button>
+            <button id="statusCloseBtn" class="panel-btn" type="button" aria-label="Close status panel" title="Close">✕</button>
+          </span>
         </div>
         <div class="day-row">
           <h1 id="dayLabel">DAY 1</h1>
@@ -63,6 +67,9 @@
         <button id="muteBtn" class="sys-btn" type="button" aria-label="Toggle sound" title="Mute (M)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2-3.74v7.48A4.5 4.5 0 0 0 16.5 12z"/></svg>
         </button>
+        <button id="mobileBtn" class="sys-btn" type="button" aria-label="Toggle mobile mode" title="Mobile mode">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18.4" r="1.2"/></svg>
+        </button>
         <button id="pauseBtn" class="sys-btn" type="button" aria-label="Pause game" title="Pause (Esc)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zm7 0h3v14h-3z"/></svg>
         </button>
@@ -87,6 +94,10 @@
             <h2 id="shelterName">Ranger's Hut</h2>
           </div>
           <span id="hauntBadge" class="haunt-badge fresh">FRESH</span>
+          <span class="panel-ctl">
+            <button id="shelterMinBtn" class="panel-btn" type="button" aria-label="Minimize shelter panel" title="Minimize">–</button>
+            <button id="shelterCloseBtn" class="panel-btn" type="button" aria-label="Close shelter panel" title="Close">✕</button>
+          </span>
         </div>
         <p id="shelterPerk" class="sp-perk">Sturdy walls, clear sightlines.</p>
         <p id="shelterOccupant" class="sp-occupant">Vacant shelter.</p>
@@ -173,6 +184,8 @@
         <button id="useBtn" class="use-btn" type="button">USE</button>
         <button id="fireBtn" class="fire-btn" type="button">FIRE</button>
       </div>
+
+      <div id="restoreHud" class="restore-hud glass" type="button" role="button" aria-label="Restore HUD panels" title="Restore panels">☰</div>
 
       <div id="crosshair" class="crosshair" aria-hidden="true">
         <i></i><i></i><i></i><i></i><span></span>

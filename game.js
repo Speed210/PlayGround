@@ -195,6 +195,9 @@
     noiseBuffer: null,
     ambientGain: null,
     ambientFilter: null,
+    musicId: null,
+    musicKind: null,
+    musicStep: 0,
     muted: loadMuted(),
     ready: false,
 
@@ -331,6 +334,88 @@
     },
     howl() {
       this.tone(rand(220, 320), 1.1, 'sine', 0.035, rand(120, 180));
+    },
+
+    /* --- dark phase music: small scheduled loops, no assets --- */
+    startMusic(kind) {
+      if (!this.ready) return;
+      this.stopMusic();
+      this.musicKind = kind;
+      this.musicStep = 0;
+      this.musicId = setInterval(() => this.musicTick(), 500);
+    },
+
+    stopMusic() {
+      if (this.musicId) { clearInterval(this.musicId); this.musicId = null; }
+      this.musicKind = null;
+    },
+
+    musicTick() {
+      if (this.muted || !this.musicKind) return;
+      const s = this.musicStep++;
+      const k = this.musicKind;
+      if (k === 'day') {
+        if (s % 8 === 0) { this.tone(196, 2.2, 'sine', 0.02, 196); this.tone(294, 1.8, 'sine', 0.012, 294, 0.3); }
+        if (s % 8 === 4) this.tone(246, 1.6, 'sine', 0.014, 246);
+      } else if (k === 'dusk') {
+        if (s % 4 === 0) this.tone(147, 2.4, 'sine', 0.026, 110);
+        if (s % 4 === 2) this.tone(233, 1.6, 'sine', 0.016, 220);
+        if (s % 16 === 6) this.noise(1.4, 0.02, 500, 'lowpass');
+      } else if (k === 'night') {
+        if (s % 2 === 0) this.tone(46, 0.24, 'sine', 0.13, 30); // heartbeat
+        if (s % 16 === 8) { this.tone(58, 3.2, 'sawtooth', 0.02, 46); this.noise(2.2, 0.02, 220, 'lowpass'); }
+        if (s % 8 === 5 && Math.random() < 0.4) this.tone(rand(700, 1100), 0.5, 'sine', 0.012, rand(400, 600));
+      } else if (k === 'boss') {
+        this.tone(82, 0.22, 'sawtooth', 0.09, 41);
+        if (s % 4 === 2) this.tone(220, 0.3, 'square', 0.02, 207);
+        if (s % 8 === 0) { this.tone(311, 0.8, 'triangle', 0.02, 280); this.noise(0.5, 0.03, 160, 'lowpass'); }
+      } else if (k === 'dawn') {
+        if (s % 6 === 0) this.tone(262, 1.8, 'sine', 0.018, 330);
+      }
+    },
+
+    bossMusic() {
+      this.tone(110, 1.6, 'sawtooth', 0.1, 55);
+      this.tone(311, 2.4, 'triangle', 0.05, 220, 0.4);
+      this.noise(1.8, 0.09, 300, 'lowpass');
+      this.startMusic('boss');
+    },
+
+    bossDefeated() {
+      this.stopMusic();
+      [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 1.4, 'sine', 0.05, f, i * 0.18));
+      this.noise(1.2, 0.1, 200, 'lowpass');
+    },
+
+    levelup() {
+      [392, 523, 659, 784].forEach((f, i) => this.tone(f, 0.35, 'triangle', 0.05, f, i * 0.09));
+    },
+
+    craft() {
+      this.noise(0.14, 0.09, 1400, 'bandpass');
+      this.tone(520, 0.2, 'square', 0.04, 660, 0.12);
+    },
+
+    cast(id) {
+      if (id === 'ember') { this.noise(0.5, 0.12, 320, 'lowpass'); this.tone(320, 0.4, 'sawtooth', 0.07, 90); }
+      else if (id === 'ward') { [523, 659, 880].forEach((f, i) => this.tone(f, 0.9, 'sine', 0.035, f, i * 0.07)); }
+      else if (id === 'frost') { this.noise(0.7, 0.1, 3200, 'highpass'); this.tone(880, 0.5, 'sine', 0.03, 1400); }
+      else if (id === 'titan') { this.tone(65, 0.6, 'square', 0.12, 32); this.noise(0.4, 0.1, 200, 'lowpass'); }
+      else { [440, 554, 659].forEach((f, i) => this.tone(f, 0.7, 'triangle', 0.045, f, i * 0.09)); }
+    },
+
+    turretShot(type) {
+      if (type === 'cannon' || type === 'mortar') { this.tone(88, 0.3, 'square', 0.13, 30); this.noise(0.28, 0.14, 180, 'lowpass'); }
+      else if (type === 'tesla') { this.tone(1200, 0.14, 'sawtooth', 0.04, 300); this.noise(0.1, 0.045, 3900, 'highpass'); }
+      else if (type === 'flame') { this.noise(0.3, 0.09, 420, 'lowpass'); }
+      else if (type === 'bfg') { this.tone(60, 0.7, 'sawtooth', 0.16, 24); this.noise(0.6, 0.16, 500, 'lowpass'); }
+      else { this.noise(0.1, 0.07, 900, 'highpass'); this.tone(150, 0.09, 'square', 0.06, 60); }
+    },
+
+    roar() {
+      this.tone(rand(90, 130), 1.3, 'sawtooth', 0.15, 40);
+      this.tone(rand(55, 70), 1.6, 'square', 0.1, 30, 0.15);
+      this.noise(1.2, 0.12, 240, 'lowpass');
     }
   };
 
@@ -341,18 +426,49 @@
   const DAY_DURATION = 80;
   const DUSK_DURATION = 12;
   const NIGHT_BASE = 46;
-  const CHAPTER_NIGHTS = 8;
+  const CHAPTER_NIGHTS = 7; // one boss SCP every seventh night, then the region changes
   const MAX_TEAM = 2;
   const WALL_RADIUS = 132;
 
-  const CHAPTERS = [
-    { name: 'THE VALLEY' },
-    { name: 'ASHEN MOOR' },
-    { name: 'THE HOLLOW' },
-    { name: 'BLACKWATER' },
-    { name: 'THE LONG NIGHT' },
-    { name: 'WHERE THE LIGHT DIES' }
+  /* Chapters are regions. After each seventh night the story moves to new
+     ground: North America -> Mexico -> Japan, then the tour repeats, harder. */
+  const REGION_DEFS = [
+    {
+      key: 'valley', name: 'THE VALLEY', land: 'NORTH AMERICA',
+      shelterNames: ["Ranger's Hut", 'Chapel Ruins', 'The Mill House', 'Watchtower', 'Lakeside Cabin', 'Old Farmstead'],
+      ground: '#0f1a12', patch: ['158,132,86', '78,102,62', '44,66,48'], tuft: ['96,124,82', '66,94,62'],
+      treeKind: 'pine', decor: 'logs',
+      treePal: [['#16251c', '#1d3125', '#29402d'], ['#18251b', '#203224', '#2c452f'], ['#142119', '#1b2b20', '#243827']]
+    },
+    {
+      key: 'sonora', name: 'SONORA RUINS', land: 'MEXICO',
+      shelterNames: ['Hacienda', 'Mission Ruins', 'The Mill House', 'Torre Vieja', 'Lakeside Casa', 'El Rancho'],
+      ground: '#1b140a', patch: ['198,156,94', '148,104,56', '116,84,48'], tuft: ['178,148,88', '130,106,64'],
+      treeKind: 'cactus', decor: 'skulls',
+      treePal: [['#3f5232', '#54693c', '#6b7f46'], ['#43552f', '#5a6e3a', '#75884a'], ['#3a4c2d', '#4e6235', '#64783e']]
+    },
+    {
+      key: 'kanto', name: 'ASHEN KANTO', land: 'JAPAN',
+      shelterNames: ['Ashiya Dojo', 'Shrine Ruins', 'The Mill House', 'Yagura Watch', 'Lakeside Ryokan', 'Satoyama Farm'],
+      ground: '#0d1412', patch: ['88,108,80', '54,76,58', '38,58,44'], tuft: ['100,132,86', '72,102,68'],
+      treeKind: 'bamboo', decor: 'lanterns',
+      treePal: [['#5a7048', '#6d8556', '#829967'], ['#546a45', '#687f52', '#7d9460'], ['#60744c', '#748a5c', '#899f6f']]
+    }
   ];
+  const REGION_LAPS = ['', 'II', 'III'];
+
+  function regionOf(chapter) {
+    const c = chapter || game.chapter || 1;
+    const index = (c - 1) % REGION_DEFS.length;
+    const lap = Math.floor((c - 1) / REGION_DEFS.length);
+    const base = REGION_DEFS[index];
+    return {
+      ...base,
+      index,
+      lap,
+      label: lap > 0 ? `${base.name} ${REGION_LAPS[lap] || lap + 1}` : base.name
+    };
+  }
 
   const WEAPONS = [
     { short: 'Mk I', dmg: 34, rate: 0.33, speed: 930 },
@@ -482,28 +598,44 @@
 
   const NAMES = ['Mira', 'Cole', 'Yara', 'Bram', 'Juno', 'Silas', 'Wren', 'Ossa', 'Tamsin', 'Rook', 'Elia', 'Dane'];
 
+  /* Containment-breach bestiary. Old-World designations, new-World valley. */
   const ENEMY_TYPES = {
-    walker: { hp: 32, speed: 52, dmg: 9, atk: 0.95, r: 12, wall: 9, color: '#241a1e', eye: '#ff5b38', label: 'Shade' },
-    crawler: { hp: 18, speed: 94, dmg: 5, atk: 0.55, r: 9, wall: 5, color: '#2b1a1f', eye: '#ff7a45', label: 'Crawler' },
-    brute: { hp: 108, speed: 37, dmg: 20, atk: 1.5, r: 19, wall: 19, color: '#1d161b', eye: '#ff3b24', label: 'Brute' },
-    wraith: { hp: 48, speed: 46, dmg: 8, atk: 2.7, r: 13, wall: 0, color: '#251d31', eye: '#c77bff', label: 'Wraith', ranged: true }
+    walker: { scp: 'SCP-173', hp: 40, speed: 34, dmg: 12, atk: 0.7, r: 12, wall: 11, color: '#b9ab8e', dark: '#8e8471', eye: '#ff3b1e', label: 'The Sculpture', xp: 7 },
+    crawler: { scp: 'SCP-939', hp: 24, speed: 100, dmg: 6, atk: 0.5, r: 10, wall: 5, color: '#5c241f', dark: '#3a1614', eye: '#ffb54a', label: 'Voice Mimic', xp: 5 },
+    brute: { scp: 'SCP-096', hp: 150, speed: 42, dmg: 24, atk: 1.25, r: 20, wall: 24, color: '#ddd6c6', dark: '#b5ad99', eye: '#ff2646', label: 'The Shy Guy', xp: 16 },
+    wraith: { scp: 'SCP-049', hp: 52, speed: 48, dmg: 9, atk: 2.3, r: 12, wall: 0, color: '#231f24', dark: '#17141a', eye: '#8fd38f', label: 'Plague Doctor', ranged: true, xp: 12 },
+    oldman: { scp: 'SCP-106', hp: 60, speed: 66, dmg: 16, atk: 1.05, r: 12, wall: 0, color: '#241f1c', dark: '#151210', eye: '#e8dc6a', label: 'The Old Man', phase: true, xp: 15 },
+    boss: { scp: 'SCP-682', hp: 2400, speed: 50, dmg: 45, atk: 1.7, r: 46, wall: 70, color: '#2c3a24', dark: '#1b2416', eye: '#ff4b2b', label: 'Hard-To-Destroy Reptile', boss: true, xp: 260 }
   };
 
-  const SHELTER_DEFS = [
-    { id: 'ranger', name: "Ranger's Hut", x: 700, y: 620, base: 150, perk: 'Sturdy walls, clear sightlines.', mod: { dmg: 1.08, spawn: 1, haunt: 1 } },
-    { id: 'chapel', name: 'Chapel Ruins', x: 1780, y: 470, base: 130, perk: 'Consecrated ground frays them.', mod: { dmg: 1, spawn: 0.82, haunt: 1 } },
-    { id: 'mill', name: 'The Mill House', x: 2400, y: 1100, base: 200, perk: 'Heavy beams. Slow to break.', mod: { dmg: 1, spawn: 1, haunt: 1 } },
-    { id: 'watch', name: 'Watchtower', x: 2010, y: 1830, base: 120, perk: 'High ground. Long sightlines.', mod: { dmg: 1.16, spawn: 1.08, haunt: 1 } },
-    { id: 'cabin', name: 'Lakeside Cabin', x: 980, y: 1770, base: 150, perk: 'Water masks your scent.', mod: { dmg: 1, spawn: 0.92, haunt: 0.6 } },
-    { id: 'farm', name: 'Old Farmstead', x: 420, y: 1320, base: 140, perk: 'Open fields. Nothing sneaks close.', mod: { dmg: 1, spawn: 1, haunt: 1, speed: 1.05 } }
+  /* Same layouts each region, but the buildings carry the region's style. */
+  const SHELTER_BASES = [
+    { x: 700, y: 620, base: 150, perk: 'Sturdy walls, clear sightlines.', mod: { dmg: 1.08, spawn: 1, haunt: 1 } },
+    { x: 1780, y: 470, base: 130, perk: 'Old ground frays them at the walls.', mod: { dmg: 1, spawn: 0.82, haunt: 1 } },
+    { x: 2400, y: 1100, base: 200, perk: 'Heavy beams. Slow to break.', mod: { dmg: 1, spawn: 1, haunt: 1 } },
+    { x: 2010, y: 1830, base: 120, perk: 'High ground. Long sightlines.', mod: { dmg: 1.16, spawn: 1.08, haunt: 1 } },
+    { x: 980, y: 1770, base: 150, perk: 'Water masks your scent.', mod: { dmg: 1, spawn: 0.92, haunt: 0.6 } },
+    { x: 420, y: 1320, base: 140, perk: 'Open fields. Nothing sneaks close.', mod: { dmg: 1, spawn: 1, haunt: 1, speed: 1.05 } }
   ];
+
+  let shelterDefs = shelterDefsFor(1);
+
+  function shelterDefsFor(chapter) {
+    const region = regionOf(chapter);
+    return SHELTER_BASES.map((base, i) => ({
+      ...base,
+      id: ['ranger', 'chapel', 'mill', 'watch', 'cabin', 'farm'][i],
+      name: region.shelterNames[i],
+      style: region.key
+    }));
+  }
 
   /* ---------------------------------------------------------------------
      World data
   --------------------------------------------------------------------- */
   const shelters = [];
   const resourceNodes = [];
-  const terrain = { patches: [], tufts: [], trees: [], rocks: [] };
+  const terrain = { patches: [], tufts: [], trees: [], rocks: [], decor: [], lake: null };
   const pathLinks = [
     ['ranger', 'chapel'], ['chapel', 'mill'], ['mill', 'watch'],
     ['watch', 'cabin'], ['cabin', 'farm'], ['farm', 'ranger'],
@@ -536,10 +668,14 @@
     };
   }
 
-  function buildWorld() {
+  function buildWorld(chapter) {
     shelters.length = 0;
-    SHELTER_DEFS.forEach((d) => shelters.push(makeShelter(d)));
-    const R = mulberry32(0x51a7f00d);
+    shelterDefs = shelterDefsFor(chapter || game.chapter || 1);
+    const region = regionOf(chapter || game.chapter || 1);
+    shelterDefs.forEach((d) => shelters.push(makeShelter(d)));
+    const R = mulberry32(0x51a7f00d + chapter * 77);
+
+    terrain.decor.length = 0;
 
     // broad ground stains
     for (let i = 0; i < 90; i++) {
@@ -549,7 +685,7 @@
         rx: 40 + R() * 180,
         ry: 25 + R() * 100,
         a: 0.035 + R() * 0.07,
-        tone: R() < 0.45 ? '170,148,104' : R() < 0.55 ? '62,79,58' : '34,52,42'
+        tone: region.patch[(R() * region.patch.length) | 0]
       });
     }
 
@@ -560,7 +696,7 @@
         y: 40 + R() * (WORLD.h - 80),
         s: 2 + R() * 4.5,
         rot: R() * TAU,
-        tone: R() < 0.5 ? '88,112,78' : '62,88,62'
+        tone: region.tuft[(R() * region.tuft.length) | 0]
       });
     }
 
@@ -595,6 +731,29 @@
       for (const s of shelters) if (dist(x, y, s.x, s.y) < s.radius + 40) ok = false;
       if (!ok) continue;
       terrain.rocks.push({ x, y, r: 4 + R() * 9, tone: R() * 0.3 });
+    }
+
+    // lakeside water for the cabin shelter — the region defines the basin
+    if (region.key === 'sonora') terrain.lake = { x: 980, y: 1900, rx: 230, ry: 92 };
+    else if (region.key === 'kanto') terrain.lake = { x: 980, y: 1780, rx: 250, ry: 130 };
+    else terrain.lake = { x: 980, y: 1770, rx: 240, ry: 140 };
+
+    // regional decoration: drift logs / cattle bones & agave / stone lanterns & torii
+    const decorKind = region.decor;
+    for (let i = 0; i < 46; i++) {
+      const x = 60 + R() * (WORLD.w - 120);
+      const y = 60 + R() * (WORLD.h - 120);
+      let ok = true;
+      for (const s of shelters) if (dist(x, y, s.x, s.y) < s.radius + 90) ok = false;
+      for (const t of terrain.trees) if (dist(x, y, t.x, t.y) < 46) ok = false;
+      if (!ok) continue;
+      terrain.decor.push({
+        x, y, kind: decorKind,
+        s: 0.7 + R() * 0.7,
+        rot: R() * TAU,
+        alt: R() < 0.5,
+        seed: R() * 10
+      });
     }
 
     // resource nodes: guaranteed starter ring + procedural scatter
@@ -647,7 +806,8 @@
   const player = {
     x: 700, y: 792, r: 14, speed: 190, aim: -Math.PI / 2,
     invuln: 0, hitFlash: 0, walk: 0, moving: false,
-    shield: 0, shieldHp: 0, titan: 0
+    shield: 0, shieldHp: 0, titan: 0,
+    inside: false, wasInside: false
   };
 
   const camera = { x: player.x, y: player.y };
@@ -692,6 +852,8 @@
     inventory: [],
     supplies: [],
     beams: [],
+    turrets: [],
+    bossAlive: false,
     focus: 100,
     maxFocus: 100,
     abilityCooldowns: {},
@@ -761,7 +923,7 @@
   }
 
   function playerMaxHealth() {
-    return 100;
+    return Math.round(100 + gearBonuses().hp * 2);
   }
 
   function resetRun() {
@@ -790,6 +952,8 @@
     game.inventory.length = 0;
     game.supplies.length = 0;
     game.beams.length = 0;
+    game.turrets.length = 0;
+    game.bossAlive = false;
     game.focus = 100;
     game.maxFocus = 100;
     game.abilityCooldowns = {};
@@ -835,6 +999,8 @@
     player.shield = 0;
     player.shieldHp = 0;
     player.titan = 0;
+    player.inside = false;
+    player.wasInside = false;
     game.maxHealth = playerMaxHealth();
     game.health = game.maxHealth;
     camera.x = player.x;
@@ -1038,10 +1204,16 @@
         else if (game.mode === 'paused') resumeGame();
         return;
       }
+      if (code === 'KeyC') { toggleKit(); return; }
+      if (code === 'Escape' && game.mode === 'kit') { closeKit(); return; }
       if (game.mode !== 'playing') return;
       if (code === 'KeyE') { doInteract(); return; }
       if (code === 'KeyR') { buyFort('repair'); return; }
+      if (code === 'KeyT') { buildTurret(); return; }
+      if (code === 'KeyB') { cycleTurretType(); return; }
       if (code === 'Space') { game.firing = true; return; }
+      const ability = ABILITIES.find((a) => a.code === code);
+      if (ability) { castAbility(ability.id); return; }
       keys.add(code);
     });
 
@@ -1110,6 +1282,7 @@
     DOM.continueBtn.addEventListener('click', beginNextDay);
     DOM.pauseBtn.addEventListener('click', togglePause);
     DOM.muteBtn.addEventListener('click', () => { Sound.resume(); Sound.setMuted(!Sound.muted); });
+    DOM.kitBtn.addEventListener('click', () => { Sound.resume(); toggleKit(); });
     DOM.claimBtn.addEventListener('click', () => {
       const s = game.panelShelter;
       if (s) claimShelter(s);
@@ -1143,6 +1316,300 @@
   }
 
   /* ---------------------------------------------------------------------
+     Field kit, ability bar, panel controls, mobile mode
+  --------------------------------------------------------------------- */
+  function toggleKit() {
+    if (game.mode === 'kit') closeKit();
+    else if (game.mode === 'playing') openKit();
+  }
+
+  function openKit() {
+    if (game.mode !== 'playing') return;
+    game.mode = 'kit';
+    game.firing = false;
+    keys.clear();
+    DOM.kitScreen.classList.remove('hidden');
+    DOM.crosshair.classList.remove('active');
+    Sound.resume();
+    Sound.ui();
+    renderKit();
+  }
+
+  function closeKit() {
+    if (game.mode !== 'kit') return;
+    game.mode = 'playing';
+    DOM.kitScreen.classList.add('hidden');
+    if (!touchMode) DOM.crosshair.classList.add('active');
+    Sound.ui();
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function itemStatsHtml(it) {
+    return Object.keys(it.stats).map((k) => `<em style="color:${it.color}">${GEAR_STAT_LABELS[k] || k} +${it.stats[k]}</em>`).join(' ');
+  }
+
+  function statRowHtml(d) {
+    const v = game.stats[d.id] || 0;
+    const maxed = v >= d.max;
+    const can = game.statPoints > 0 && !maxed;
+    return `
+      <div class="kit-row">
+        <div class="kit-row-main">
+          <b style="color:${can ? 'var(--gold)' : 'var(--bone-dim)'}">${escHtml(d.label)}</b>
+          <span>${escHtml(d.desc)}</span>
+          <small>${d.short} <i>${d.fmt(v)}</i>${d.max ? ` / ${d.fmt(d.max)}` : ''}</small>
+        </div>
+        <button class="kit-plus" data-stat="${d.id}" ${maxed || game.statPoints <= 0 ? 'disabled' : ''}>+1</button>
+      </div>`;
+  }
+
+  function renderKit() {
+    if (game.mode !== 'kit') return;
+    setText(DOM.kitLevel, `LV ${game.level}`);
+    setText(DOM.kitXp, `${Math.floor(game.xp)} / ${game.xpNext} XP`);
+    setText(DOM.kitPoints, `${game.statPoints} stat point${game.statPoints === 1 ? '' : 's'}`);
+    setText(DOM.kitHint, 'C closes · Build = pick turret, T drops one');
+
+    document.querySelectorAll('.kit-tabs button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.kitTab === game.kitTab);
+    });
+    Object.keys(DOM.kitPanes).forEach((k) => {
+      DOM.kitPanes[k].classList.toggle('active', k === game.kitTab);
+    });
+
+    const body = DOM.kitPanes[game.kitTab];
+    if (!body) return;
+
+    if (game.kitTab === 'stats') {
+      body.innerHTML = STAT_DEFS.map(statRowHtml).join('');
+    } else if (game.kitTab === 'gear') {
+      const slotsHtml = EQUIP_SLOTS.map((s) => {
+        const it = game.equipment[s.id];
+        return `
+          <div class="kit-row">
+            <div class="kit-row-main">
+              <b style="color:${it ? it.color : 'var(--muted)'}">${escHtml(s.label)}${it ? ' · ' + escHtml(it.name) : ' — empty'}</b>
+              ${it ? `<small>${itemStatsHtml(it)}</small>` : '<small>Creature drops or craft below.</small>'}
+            </div>
+            ${it ? `<button class="kit-act" data-unequip="${s.id}">Remove</button>` : ''}
+          </div>`;
+      }).join('');
+      const invHtml = game.inventory.length
+        ? game.inventory.map((it) => `
+          <div class="kit-row">
+            <div class="kit-row-main">
+              <b style="color:${it.color}">${escHtml(it.name)}</b>
+              <small>${it.tierLabel} · ${escHtml(it.slotLabel)} · ${itemStatsHtml(it)}</small>
+            </div>
+            <button class="kit-act" data-equip="${it.id}">Equip</button>
+          </div>`).join('')
+        : '<p class="kit-empty">Nothing in the bag. Kill more of the dark — or craft.</p>';
+      const craftHtml = CRAFT_RECIPES.map((r) => {
+        const ok = canCraft(r);
+        const cost = Object.keys(r.cost).map((k) => `${r.cost[k]} ${k}`).join(' · ');
+        return `
+          <div class="kit-row">
+            <div class="kit-row-main">
+              <b style="color:${ok ? 'var(--gold)' : 'var(--muted)'}">Craft ${escHtml(r.label)}</b>
+              <small>${cost}</small>
+            </div>
+            <button class="kit-act" data-craft="${r.slot}" ${ok ? '' : 'disabled'}>Craft</button>
+          </div>`;
+      }).join('');
+      body.innerHTML = `<h3 class="kit-h3">Worn</h3>${slotsHtml}<h3 class="kit-h3">Bag</h3>${invHtml}<h3 class="kit-h3">Crafting Bench</h3>${craftHtml}`;
+    } else if (game.kitTab === 'spells') {
+      body.innerHTML = ABILITIES.map((a) => {
+        const un = abilityUnlocked(a);
+        const cd = game.abilityCooldowns[a.id] || 0;
+        return `
+          <div class="kit-row">
+            <div class="kit-row-main">
+              <b style="color:${un ? 'var(--gold)' : 'var(--muted)'}">[${a.key}] ${escHtml(a.name)}</b>
+              <span>${escHtml(a.desc)}</span>
+              <small>${a.kind} · ${a.cost} focus · ${a.cooldown}s${cd > 0 ? ' · cooling ' + cd.toFixed(1) : ''}${un ? '' : ` · needs level ${a.unlock}`}</small>
+            </div>
+            <button class="kit-act" data-cast="${a.id}" ${un && game.focus >= a.cost && cd <= 0 ? '' : 'disabled'}>Cast</button>
+          </div>`;
+      }).join('');
+    } else if (game.kitTab === 'build') {
+      body.innerHTML = `<p class="kit-empty">Turrets are raised during the day. Pick a pattern — then <kbd>T</kbd> in the field drops one where you stand.</p>` +
+        Object.keys(TURRETS).map((k) => {
+          const d = TURRETS[k];
+          const un = turretUnlocked(k);
+          const sel = game.buildTurretType === k;
+          const cost = Object.keys(d.cost).map((c) => `${d.cost[c]} ${c}`).join(' · ');
+          return `
+            <div class="kit-row">
+              <div class="kit-row-main">
+                <b style="color:${sel ? 'var(--gold)' : un ? 'var(--bone-dim)' : 'var(--muted)'}">${escHtml(d.label)}${sel ? ' ◀ selected' : ''}</b>
+                <span>${escHtml(d.desc)}</span>
+                <small>${cost} · ${d.range} range${un ? '' : ` · needs Turret Craft rank ${d.unlock}`}</small>
+              </div>
+              <button class="kit-act" data-turret="${k}" ${un ? '' : 'disabled'}>Pick</button>
+            </div>`;
+        }).join('');
+    } else if (game.kitTab === 'squad') {
+      body.innerHTML = game.companions.length
+        ? game.companions.map((c) => {
+          const st = c.state === 'team' ? 'With you' : c.state === 'shelter' ? 'Holding a shelter' : c.state === 'travel' ? 'Traveling' : c.state === 'dead' ? 'Lost' : 'Wild';
+          const color = c.state === 'dead' ? 'var(--red)' : c.state === 'team' ? 'var(--gold)' : 'var(--bone-dim)';
+          return `
+            <div class="kit-row">
+              <div class="kit-row-main">
+                <b style="color:${color}">${escHtml(c.name)} · ${ROLES[c.role].label}</b>
+                <small>${st} · ${Math.ceil(c.hp)}/${c.maxHp} HP</small>
+              </div>
+            </div>`;
+        }).join('')
+        : '<p class="kit-empty">No survivors found yet. They appear in the valley during the day.</p>';
+    }
+  }
+
+  function bindKit() {
+    document.querySelectorAll('.kit-tabs button').forEach((b) => {
+      b.addEventListener('click', () => {
+        game.kitTab = b.dataset.kitTab;
+        renderKit();
+        Sound.ui();
+      });
+    });
+    DOM.kitCloseBtn.addEventListener('click', closeKit);
+    DOM.kitScreen.addEventListener('click', (e) => {
+      const plus = e.target.closest('[data-stat]');
+      if (plus && !plus.disabled) {
+        const id = plus.dataset.stat;
+        const def = STAT_DEFS.find((d) => d.id === id);
+        if (def && game.statPoints > 0 && (game.stats[id] || 0) < def.max) {
+          game.statPoints--;
+          game.stats[id] = (game.stats[id] || 0) + 1;
+          game.maxHealth = playerMaxHealth();
+          Sound.claim();
+          renderKit();
+        }
+        return;
+      }
+      const eq = e.target.closest('[data-equip]');
+      if (eq) { equipItem(eq.dataset.equip); return; }
+      const un = e.target.closest('[data-unequip]');
+      if (un) { unequipItem(un.dataset.unequip); return; }
+      const cr = e.target.closest('[data-craft]');
+      if (cr && !cr.disabled) {
+        const recipe = CRAFT_RECIPES.find((r) => r.slot === cr.dataset.craft);
+        if (recipe) craftGear(recipe);
+        return;
+      }
+      const cast = e.target.closest('[data-cast]');
+      if (cast && !cast.disabled) {
+        closeKit();
+        castAbility(cast.dataset.cast);
+        return;
+      }
+      const tur = e.target.closest('[data-turret]');
+      if (tur && !tur.disabled) {
+        game.buildTurretType = tur.dataset.turret;
+        toast('TURRET SELECTED', TURRETS[game.buildTurretType].label + ' — T drops one near you.', '');
+        Sound.ui();
+        renderKit();
+      }
+    });
+  }
+
+  function cycleTurretType() {
+    const options = Object.keys(TURRETS).filter((k) => turretUnlocked(k));
+    if (!options.length) { toast('NO TURRETS', 'Learn Turret Craft first — it grows with level and TUR stat.', 'warn'); return; }
+    const i = options.indexOf(game.buildTurretType);
+    game.buildTurretType = options[(i + 1) % options.length];
+    toast('TURRET SELECTED', TURRETS[game.buildTurretType].label + ' — T to raise it.', '');
+    Sound.ui();
+  }
+
+  function buildAbilityBar() {
+    if (!DOM.abilitySlots || DOM.abilitySlots.dataset.built) return;
+    DOM.abilitySlots.dataset.built = '1';
+    DOM.abilitySlots.innerHTML = ABILITIES.map((a) => `
+      <button class="ability-slot" data-cast="${a.id}" data-key="${a.key}" title="${escHtml(a.name)} — ${escHtml(a.desc)}">
+        <kbd>${a.key}</kbd><span>${escHtml(a.name)}</span>
+        <i class="ability-cd"></i>
+      </button>`).join('');
+    DOM.abilitySlots.querySelectorAll('[data-cast]').forEach((b) => {
+      b.addEventListener('click', () => castAbility(b.dataset.cast));
+    });
+  }
+
+  function updateAbilityBar() {
+    if (!DOM.abilitySlots || !DOM.abilitySlots.dataset.built) return;
+    DOM.abilitySlots.querySelectorAll('.ability-slot').forEach((b) => {
+      const a = ABILITIES.find((x) => x.id === b.dataset.cast);
+      if (!a) return;
+      const un = abilityUnlocked(a);
+      const cd = game.abilityCooldowns[a.id] || 0;
+      b.classList.toggle('locked', !un);
+      b.classList.toggle('cooling', cd > 0);
+      b.classList.toggle('no-focus', game.focus < a.cost);
+      b.querySelector('.ability-cd').style.height = cd > 0 ? `${(cd / a.cooldown) * 100}%` : '0%';
+    });
+  }
+
+  /* panel close / minimize */
+  function updateRestoreChip() {
+    const chip = document.getElementById('restoreHud');
+    if (!chip) return;
+    const closed = document.querySelectorAll('.panel-closed').length;
+    chip.style.visibility = closed ? 'visible' : 'hidden';
+  }
+
+  function bindPanelControls() {
+    const wire = (panelId, minBtn, closeBtn, bodySel) => {
+      const panel = document.getElementById(panelId);
+      const min = document.getElementById(minBtn);
+      const clos = document.getElementById(closeBtn);
+      if (!panel || !min || !clos) return;
+      min.addEventListener('click', () => {
+        panel.classList.toggle('minimized');
+        min.textContent = panel.classList.contains('minimized') ? '+' : '–';
+        Sound.ui();
+      });
+      clos.addEventListener('click', () => {
+        panel.classList.add('panel-closed');
+        updateRestoreChip();
+        Sound.ui();
+      });
+    };
+    wire('statusPanel', 'statusMinBtn', 'statusCloseBtn');
+    wire('shelterPanel', 'shelterMinBtn', 'shelterCloseBtn');
+    const chip = document.getElementById('restoreHud');
+    if (chip) {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.panel-closed').forEach((p) => p.classList.remove('panel-closed'));
+        updateRestoreChip();
+        Sound.ui();
+      });
+    }
+  }
+
+  function bindMobileToggle() {
+    const btn = document.getElementById('mobileBtn');
+    if (!btn) return;
+    let forced = false;
+    try { forced = localStorage.getItem('nightfall.mobile') === '1'; } catch (e) { /* ignore */ }
+    const apply = () => {
+      document.body.classList.toggle('touch', touchMode || forced);
+      btn.classList.toggle('active', forced);
+      btn.title = forced ? 'Mobile mode ON — click to return to desktop layout' : 'Enable mobile mode';
+    };
+    apply();
+    btn.addEventListener('click', () => {
+      forced = !forced;
+      try { localStorage.setItem('nightfall.mobile', forced ? '1' : '0'); } catch (e) { /* ignore */ }
+      apply();
+      Sound.ui();
+    });
+  }
+
+  /* ---------------------------------------------------------------------
      Screen flow
   --------------------------------------------------------------------- */
   function hideScreens(except) {
@@ -1157,6 +1624,9 @@
     keys.clear();
     resetRun();
     hideScreens();
+    DOM.kitScreen.classList.add('hidden');
+    document.querySelectorAll('.panel-closed').forEach((p) => p.classList.remove('panel-closed'));
+    updateRestoreChip();
     DOM.hud.classList.add('visible');
     DOM.hud.classList.remove('dim');
     DOM.crosshair.classList.add('active');
@@ -1165,6 +1635,7 @@
     game.phaseTime = 0;
     game.phaseDuration = DAY_DURATION;
     game.health = game.maxHealth;
+    Sound.startMusic('day');
     banner('DAY 1', 'THE VALLEY WAKES', 'Gather. Claim a shelter. Do not be caught in the open.', '', 3);
     toast('DAYLIGHT', 'Six shelters stand in this chapter. They will not stay fresh forever.', 'good');
     setTimeout(() => {
@@ -1204,6 +1675,7 @@
     game.phaseDuration = DUSK_DURATION;
     banner('DUSK', 'THE LIGHT FAILS', 'Get behind a barricade. They come with the dark.', 'dusk', 2.6);
     toast('DUSK', 'Nightfall is close.', 'warn');
+    Sound.startMusic('dusk');
     Sound.setNight(true);
   }
 
@@ -1211,6 +1683,9 @@
     if (game.mode !== 'playing') return;
     game.phase = 'night';
     game.phaseTime = 0;
+    const nightInChapter = game.day - (game.chapter - 1) * CHAPTER_NIGHTS;
+    const bossNight = nightInChapter === CHAPTER_NIGHTS;
+    game.bossAlive = false;
     game.nightDuration = Math.round(NIGHT_BASE + Math.min(28, (game.day - 1) * 3.2) + (game.chapter - 1) * 4);
     game.phaseDuration = game.nightDuration;
     game.nightKills = 0;
@@ -1223,10 +1698,28 @@
     game.spawnQueue = Math.round((4 + game.day * 2 + haunt * 2 + (game.chapter - 1) * 2) * spawnMod);
     game.trickle = Math.max(1.45, 4.7 - game.day * 0.24 - haunt * 0.38);
     spawnResidentRaids();
+    if (bossNight) {
+      // The seventh night belongs to something that will not stay contained.
+      game.nightDuration = 9999;
+      game.phaseDuration = 9999;
+      game.spawnQueue = 1;
+      game.trickle = Math.max(2.2, game.trickle + 1.15);
+      const boss = makeEnemy('boss', player.x + rand(-420, 420), player.y + rand(-420, 420), null);
+      boss.x = clamp(boss.x, 200, WORLD.w - 200);
+      boss.y = clamp(boss.y, 200, WORLD.h - 200);
+      game.enemies.push(boss);
+      game.bossAlive = true;
+      banner('NIGHT SEVEN', 'SCP-682 UNCONTAINED', 'Kill it. Containment has failed.', 'night', 4);
+      toast('BOSS NIGHT', `${boss.scp} — kill it and the chapter ends.`, 'alert');
+      Sound.bossMusic();
+      game.shake = Math.max(game.shake, 12);
+      return;
+    }
     banner('NIGHTFALL', 'THEY ARE COMING', active ? `Hold ${active.name} until dawn.` : 'You have no shelter. Keep moving.', 'night', 3.2);
     if (!active) toast('NO SHELTER', 'They will come for you directly. Run. Shoot. Survive.', 'alert');
     else if (haunt >= 2) toast('REMEMBERED GROUND', `${active.name} knows your scent. They are already close.`, 'alert');
     Sound.night();
+    Sound.startMusic('night');
     Sound.setNight(true);
     game.shake = Math.max(game.shake, 5);
   }
@@ -1278,6 +1771,8 @@
     DOM.crosshair.classList.remove('active');
     flash(DOM.healFlash, 0.65, 900);
     Sound.dawn();
+    Sound.stopMusic();
+    Sound.startMusic('dawn');
     Sound.setNight(false);
     updateBestBadges();
   }
@@ -1297,6 +1792,7 @@
     game.projectiles.length = 0;
     game.bullets.length = 0;
     DOM.crosshair.classList.add('active');
+    Sound.startMusic('day');
     if (game.nightsHeld > 0 && game.nightsHeld % CHAPTER_NIGHTS === 0) {
       advanceChapter();
     } else {
@@ -1308,11 +1804,15 @@
   }
 
   function advanceChapter() {
-    game.chapter = Math.min(CHAPTERS.length, game.chapter + 1);
-    for (const s of shelters) {
-      if (!s.state.collapsed) s.state.haunt = 0;
-      s.state.breached = false;
-    }
+    game.chapter = game.chapter + 1;
+    const region = regionOf(game.chapter);
+    // The story crosses a border: rebuild the ground in the region's style.
+    buildWorld(game.chapter);
+    resetShelters();
+    for (const s of shelters) s.state.breached = false;
+    game.activeShelter = null;
+    game.panelShelter = null;
+    game.turrets.length = 0;
     let collapsed = null;
     const available = shelters.filter((s) => !s.state.collapsed);
     if (available.length > 4) {
@@ -1326,10 +1826,10 @@
     }
     const wildCount = game.companions.filter((c) => c.state === 'wild').length;
     if (wildCount < 2) spawnWildCompanions(2);
-    const title = CHAPTERS[game.chapter - 1].name;
-    banner(`CHAPTER ${roman(game.chapter)}`, title, 'The map is smaller now. The dark is older.', 'night', 3.6);
+    banner(`CHAPTER ${roman(game.chapter)}`, region.label, `${region.land}. New ground. Older things.`, 'night', 4);
+    toast('CROSSED THE BORDER', `You made it to ${region.label}.`, 'good');
     if (collapsed) toast('SHELTER LOST', `${collapsed.name} has caved in. Fewer roofs. Harder nights.`, 'alert');
-    toast('NEW CHAPTER', 'Old haunts have cooled, but every shelter is now precious.', 'warn');
+    toast('NEW CHAPTER', 'The dark gets stronger every chapter. Spend your stat points (C).', 'warn');
     Sound.night();
     updateTeamUI(true);
   }
@@ -1402,13 +1902,25 @@
     const len = Math.hypot(ix, iy);
     if (len > 1) { ix /= len; iy /= len; }
     player.moving = len > 0.08;
+    player.titan = Math.max(0, player.titan - dt);
     const active = getActiveShelter();
-    const speedMod = active && dist(player.x, player.y, active.x, active.y) < active.radius + 30
-      ? (active.id === 'farm' ? 1.02 : 1)
-      : 1;
-    player.x = clamp(player.x + ix * player.speed * speedMod * dt, 34, WORLD.w - 34);
-    player.y = clamp(player.y + iy * player.speed * speedMod * dt, 34, WORLD.h - 34);
+    player.inside = !!(active && dist(player.x, player.y, active.x, active.y) < active.radius * 0.62);
+    // Shelter perks only count while you are walking the same ground.
+    const inPerk = active && dist(player.x, player.y, active.x, active.y) < active.radius + 30;
+    const speedMod = inPerk && active.id === 'farm' ? 1.02 : 1;
+    const gearSpeed = 1 + gearBonuses().speed * 0.015 + (inPerk && active.mod.speed ? active.mod.speed - 1 : 0);
+    player.x = clamp(player.x + ix * player.speed * speedMod * gearSpeed * (player.titan > 0 ? 1.38 : 1) * dt, 34, WORLD.w - 34);
+    player.y = clamp(player.y + iy * player.speed * speedMod * gearSpeed * (player.titan > 0 ? 1.38 : 1) * dt, 34, WORLD.h - 34);
     if (player.moving) player.walk += dt * 9.5;
+
+    // announce sheltering
+    if (player.inside !== player.wasInside) {
+      player.wasInside = player.inside;
+      if (game.phase !== 'day') {
+        if (player.inside) toast('SHELTERED', 'Four walls and a fire. They must break the barricade to reach you.', 'good');
+        else toast('EXPOSED', 'You stepped into the open.', 'warn');
+      }
+    }
 
     if (touchMode) {
       if (game.firing) {
@@ -1422,7 +1934,11 @@
     if (game.phase === 'day' && game.health < game.maxHealth) {
       game.health = Math.min(game.maxHealth, game.health + 2.6 * dt);
     }
+    if (player.inside && game.health < game.maxHealth) {
+      game.health = Math.min(game.maxHealth, game.health + 1.4 * dt); // fireside rest
+    }
 
+    updateAbilities(dt);
     if (game.firing && game.cooldown <= 0) shoot();
   }
 
@@ -1716,20 +2232,25 @@
   function shoot() {
     const w = WEAPONS[game.weaponTier - 1];
     const active = getActiveShelter();
-    const dmgMult = active ? active.mod.dmg : 1;
+    const gb = gearBonuses();
+    const dmgMult = (active ? active.mod.dmg : 1)
+      * (1 + statsBonus('damage') * 0.08 + gb.dmg * 0.02)
+      * (player.titan > 0 ? 1.5 : 1);
     const spread = (0.03 - game.weaponTier * 0.004) * (player.moving ? 1.8 : 1);
     const a = player.aim + (Math.random() - 0.5) * spread;
     const bx = player.x + Math.cos(a) * 23;
     const by = player.y + Math.sin(a) * 23;
+    const crit = Math.random() < (statsBonus('crit') * 0.015 + gb.crit * 0.008);
     game.bullets.push({
       x: bx, y: by, px: bx, py: by,
       vx: Math.cos(a) * w.speed,
       vy: Math.sin(a) * w.speed,
       life: 0.92,
-      dmg: w.dmg * dmgMult,
+      dmg: w.dmg * dmgMult * (crit ? 1.6 + (statsBonus('critDmg') * 0.08 + gb.critDmg * 0.02) : 1),
+      crit,
       owner: 'player'
     });
-    game.cooldown = w.rate;
+    game.cooldown = w.rate * (player.titan > 0 ? 0.72 : 1);
     game.muzzle = 0.07;
     game.shake = Math.max(game.shake, 2.4);
     spawnSparks(bx, by, 2, '#ffd490', 0.55);
@@ -1773,8 +2294,18 @@
       b.y = ny;
       if (hit) {
         damageEnemy(hit, b.dmg, b.vx, b.vy);
-        game.bullets.splice(i, 1);
-        continue;
+        if (b.burn) hit.burn = Math.max(hit.burn || 0, b.burn);
+        if (b.splash) {
+          damageArea(hit.x, hit.y, b.splash, b.dmg * 0.55);
+          spawnSparks(hit.x, hit.y, 8, b.color || '#ff9a4f', 1.3);
+          game.shake = Math.max(game.shake, 3);
+        }
+        if (b.pierce > 0) {
+          b.pierce--;
+        } else {
+          game.bullets.splice(i, 1);
+          continue;
+        }
       }
       if (b.x < 20 || b.x > WORLD.w - 20 || b.y < 20 || b.y > WORLD.h - 20) game.bullets.splice(i, 1);
     }
@@ -1785,11 +2316,19 @@
     e.hp -= dmg;
     e.hitFlash = 0.13;
     const m = Math.hypot(vx || 1, vy || 1) || 1;
-    e.x += ((vx || 1) / m) * 4;
-    e.y += ((vy || 1) / m) * 4;
-    spawnMist(e.x, e.y, e.type === 'brute' ? 5 : 3, '#6c4650');
+    const knock = e.boss ? 0.6 : 4;
+    e.x += ((vx || 1) / m) * knock;
+    e.y += ((vy || 1) / m) * knock;
+    spawnMist(e.x, e.y, e.boss ? 8 : e.type === 'brute' ? 5 : 3, '#6c4650');
     Sound.hit();
     if (e.hp <= 0) killEnemy(e);
+  }
+
+  function damageArea(x, y, radius, dmg) {
+    for (const e of game.enemies) {
+      if (e.dead) continue;
+      if (dist(x, y, e.x, e.y) < radius + e.r) damageEnemy(e, dmg, 0, 0);
+    }
   }
 
   function killEnemy(e) {
@@ -1797,18 +2336,356 @@
     e.dead = true;
     game.kills++;
     game.nightKills++;
-    spawnMist(e.x, e.y, e.type === 'brute' ? 22 : 12, '#5b3c49');
-    spawnSparks(e.x, e.y, 6, e.type === 'wraith' ? '#c77bff' : '#d5533f', 1.1);
-    game.shake = Math.max(game.shake, e.type === 'brute' ? 6 : 2.5);
+    const big = e.type === 'brute' || e.boss;
+    spawnMist(e.x, e.y, e.boss ? 40 : e.type === 'brute' ? 22 : 12, '#5b3c49');
+    spawnSparks(e.x, e.y, 6, ENEMY_TYPES[e.type].eye, 1.1);
+    game.shake = Math.max(game.shake, e.boss ? 26 : e.type === 'brute' ? 6 : 2.5);
     Sound.kill();
+    addXp(e.xp * (1 + (game.chapter - 1) * 0.35));
+
     // The fallen are salvage: sometimes iron, sometimes timber or stone.
-    if (Math.random() < (e.type === 'brute' ? 0.75 : 0.4)) {
+    if (Math.random() < (big ? 0.9 : e.boss ? 1 : 0.4)) {
       const roll = Math.random();
       const type = roll < 0.42 ? 'scrap' : roll < 0.72 ? 'wood' : 'stone';
-      game.resources[type]++;
+      game.resources[type] += e.boss ? 10 : 1;
       const color = type === 'wood' ? '#b07a47' : type === 'stone' ? '#9aa1a0' : '#7fb2a5';
-      addText(e.x, e.y - 20, `+1 ${type.toUpperCase()}`, color);
+      addText(e.x, e.y - 20, `+${e.boss ? 10 : 1} ${type.toUpperCase()}`, color);
     }
+    rollGearDrop(e);
+
+    if (e.boss) bossDefeated(e);
+  }
+
+  /* ---------------------------------------------------------------------
+     Experience, gear drops, crafting
+  --------------------------------------------------------------------- */
+  function addXp(amount) {
+    game.xp += amount;
+    game.totalXp += amount;
+    let leveled = 0;
+    while (game.xp >= game.xpNext) {
+      game.xp -= game.xpNext;
+      game.xpNext = Math.round(game.xpNext * 1.22 + 7);
+      game.level++;
+      game.statPoints++;
+      leveled++;
+    }
+    if (leveled) {
+      addText(player.x, player.y - 34, `LEVEL ${game.level} · +${leveled} SP`, '#ffd970');
+      toast('LEVEL UP', `${game.level} · +${leveled} stat point${leveled > 1 ? 's' : ''} — open the field kit (C).`, 'good');
+      Sound.levelup();
+      spawnSparks(player.x, player.y, 16, '#ffd970', 1.6);
+    }
+  }
+
+  function pickGearTier() {
+    const r = Math.random() * (1 + Math.min(2, (game.day + game.level) * 0.03) * TIERS.length);
+    for (let i = TIERS.length - 1; i >= 0; i--) {
+      if (r > Math.pow(0.72, TIERS.length - 1 - i) * TIERS.length * 0.5) return i;
+    }
+    return 0;
+  }
+
+  function makeGearItem(slot, tierIdx) {
+    const tier = TIERS[clamp(tierIdx, 0, TIERS.length - 1)];
+    const def = EQUIP_SLOTS.find((s) => s.id === slot);
+    const statPool = { dmg: [1, 8], armor: [2, 9], hp: [4, 16], crit: [1, 6], critDmg: [2, 10], speed: [1, 5], scav: [1, 5], binding: [1, 5], engineering: [1, 5], turret: [0, 2] };
+    const stats = {};
+    def.stats.forEach((statId) => {
+      if (Math.random() < 0.82) {
+        const [lo, hi] = statPool[statId] || [1, 5];
+        stats[statId] = Math.max(1, Math.round((lo + Math.random() * (hi - lo)) * tier.mult));
+      }
+    });
+    if (!Object.keys(stats).length) stats.armor = 3;
+    return {
+      id: 'g' + Math.random().toString(36).slice(2, 9),
+      slot,
+      slotLabel: def.label,
+      tier: tier.id,
+      tierLabel: tier.label,
+      color: tier.color,
+      name: `${pick(GEAR_PREFIX)} ${pick(GEAR_WORDS[slot])}`,
+      stats
+    };
+  }
+
+  function rollGearDrop(e) {
+    const chance = e.boss ? 1 : (e.type === 'brute' ? 0.34 : 0.16) + game.stats.scavenging * 0.004 + game.day * 0.006;
+    if (Math.random() > chance) return;
+    const slot = pick(EQUIP_SLOTS).id;
+    const item = makeGearItem(slot, e.boss ? TIERS.length - 1 : pickGearTier());
+    game.inventory.push(item);
+    addText(e.x, e.y - 34, `${item.tierLabel.toUpperCase()} ${item.slotLabel.toUpperCase()}`, item.color);
+    toast('GEAR DROPPED', `${item.name} — equip it in the kit (C → Gear).`, 'good');
+    Sound.dawn();
+  }
+
+  function gearBonuses() {
+    const b = { dmg: 0, armor: 0, hp: 0, speed: 0, scav: 0, binding: 0, engineering: 0, turret: 0, crit: 0, critDmg: 0 };
+    for (const slot of EQUIP_SLOTS) {
+      const it = game.equipment[slot.id];
+      if (!it) continue;
+      for (const k of Object.keys(it.stats)) b[k] += it.stats[k];
+    }
+    return b;
+  }
+
+  const CRAFT_RECIPES = [
+    { slot: 'body', cost: { wood: 6, scrap: 4 }, label: 'Body Armor' },
+    { slot: 'helmet', cost: { stone: 3, scrap: 3 }, label: 'Helmet' },
+    { slot: 'shoes', cost: { wood: 4, scrap: 2, stone: 2 }, label: 'Shoes' },
+    { slot: 'gloves', cost: { scrap: 5 }, label: 'Gloves' },
+    { slot: 'weapon', cost: { scrap: 6, wood: 4 }, label: 'Weapon' }
+  ];
+
+  function canCraft(recipe) {
+    return recipe.cost && Object.keys(recipe.cost).every((k) => (game.resources[k] || 0) >= recipe.cost[k]);
+  }
+
+  function craftGear(recipe) {
+    if (!canCraft(recipe)) {
+      toast('NOT ENOUGH MATERIALS', `Crafting ${recipe.label} needs the listed resources.`, 'warn');
+      Sound.deny();
+      return;
+    }
+    for (const k of Object.keys(recipe.cost)) game.resources[k] -= recipe.cost[k];
+    const masteryBonus = Math.min(TIERS.length - 1, Math.floor(game.stats.mastery * 0.5) + (game.day >= 4 ? 1 : 0));
+    const item = makeGearItem(recipe.slot, 2 + masteryBonus);
+    game.inventory.push(item);
+    toast('CRAFTED', `${item.name} (${item.tierLabel}) — equip it in Gear.`, 'good');
+    Sound.craft();
+    renderKit();
+  }
+
+  function equipItem(itemId) {
+    const idx = game.inventory.findIndex((i) => i.id === itemId);
+    if (idx < 0) return;
+    const item = game.inventory[idx];
+    const current = game.equipment[item.slot];
+    game.inventory.splice(idx, 1);
+    if (current) game.inventory.push(current);
+    game.equipment[item.slot] = item;
+    game.maxHealth = playerMaxHealth();
+    game.health = Math.min(game.health, game.maxHealth);
+    toast('EQUIPPED', `${item.name} in ${item.slotLabel}.`, 'good');
+    Sound.claim();
+    renderKit();
+  }
+
+  function unequipItem(slotId) {
+    const item = game.equipment[slotId];
+    if (!item) return;
+    game.equipment[slotId] = null;
+    game.inventory.push(item);
+    game.maxHealth = playerMaxHealth();
+    game.health = Math.min(game.health, game.maxHealth);
+    Sound.ui();
+    renderKit();
+  }
+
+  /* ---------------------------------------------------------------------
+     Spells
+  --------------------------------------------------------------------- */
+  function abilityUnlocked(a) {
+    return game.level >= a.unlock;
+  }
+
+  function castAbility(id) {
+    if (game.mode !== 'playing') return;
+    const a = ABILITIES.find((x) => x.id === id);
+    if (!a) return;
+    if (!abilityUnlocked(a)) {
+      toast('SEALED', `${a.name} unlocks at level ${a.unlock}.`, 'warn');
+      Sound.deny();
+      return;
+    }
+    const cd = game.abilityCooldowns[a.id] || 0;
+    if (cd > 0) { Sound.deny(); return; }
+    if (game.focus < a.cost) {
+      toast('FOCUS DRAINED', `${a.name} needs ${a.cost} focus.`, 'warn');
+      Sound.deny();
+      return;
+    }
+    game.focus -= a.cost;
+    game.abilityCooldowns[a.id] = a.cooldown;
+    Sound.cast(a.id);
+    const dmgScale = 1 + (game.level * 0.05) + statsBonus('damage') * 0.08 + gearBonuses().dmg * 0.02;
+
+    if (a.id === 'ember') {
+      const count = 3;
+      for (let i = 0; i < count; i++) {
+        const spread = (i - 1) * 0.16;
+        const ang = player.aim + spread;
+        game.bullets.push({
+          x: player.x + Math.cos(ang) * 20, y: player.y + Math.sin(ang) * 20,
+          px: player.x, py: player.y,
+          vx: Math.cos(ang) * 700, vy: Math.sin(ang) * 700,
+          life: 1.1, dmg: 85 * dmgScale, owner: 'player',
+          burn: 2.6, splash: 44, color: '#ff8a3f', big: true
+        });
+      }
+      spawnSparks(player.x + Math.cos(player.aim) * 24, player.y + Math.sin(player.aim) * 24, 10, '#ff8a3f', 1.6);
+      toast('EMBERLANCE', 'Fire lances burn through the dark.', '');
+    } else if (a.id === 'ward') {
+      player.shieldHp = 70 + game.level * 3;
+      spawnSparks(player.x, player.y, 18, '#ffd970', 1.4);
+      toast('WARDLIGHT', 'A halo of old light holds the claws.', 'good');
+    } else if (a.id === 'frost') {
+      for (const e of game.enemies) {
+        if (e.dead) continue;
+        const d = dist(player.x, player.y, e.x, e.y);
+        if (d < 300) {
+          e.slow = Math.max(e.slow, 4.2);
+          damageEnemy(e, 16 * dmgScale, 0, 0);
+        }
+      }
+      spawnMist(player.x, player.y, 24, '#9bdcff');
+      spawnSparks(player.x, player.y, 14, '#9bdcff', 1.8);
+      toast('FROST NOVA', 'The ground freezes. Everything slows.', 'good');
+    } else if (a.id === 'titan') {
+      player.titan = 8;
+      spawnSparks(player.x, player.y, 20, '#e8c76a', 2);
+      toast('TITAN STEP', 'You move like something the dark forgot to take.', 'good');
+    } else if (a.id === 'rally') {
+      for (const c of teamMembers()) {
+        c.x = player.x + rand(-30, 30);
+        c.y = player.y + rand(22, 44);
+        c.hp = c.maxHp;
+        c.fireTimer = 0.3;
+      }
+      flash(DOM.healFlash, 0.8, 900);
+      toast('RALLY', 'The squad is beside you and whole again.', 'good');
+    }
+  }
+
+  function statsBonus(id) {
+    return game.stats[id] || 0;
+  }
+
+  function updateAbilities(dt) {
+    game.focus = Math.min(game.maxFocus, game.focus + 3.1 * dt);
+    for (const a of ABILITIES) {
+      const cd = game.abilityCooldowns[a.id] || 0;
+      if (cd > 0) game.abilityCooldowns[a.id] = Math.max(0, cd - dt);
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     Turrets
+  --------------------------------------------------------------------- */
+  function turretUnlocked(type) {
+    const def = TURRETS[type];
+    return game.stats.turret + Math.floor(game.level / 3) >= def.unlock;
+  }
+
+  function buildTurret() {
+    if (game.mode !== 'playing') return;
+    const type = game.buildTurretType;
+    const def = TURRETS[type];
+    if (!turretUnlocked(type)) {
+      toast('TURRET SEALED', `${def.label} needs Turret Craft rank ${def.unlock}.`, 'warn');
+      Sound.deny();
+      return;
+    }
+    const mine = getActiveShelter();
+    if (mine && dist(player.x, player.y, mine.x, mine.y) < 720 && game.phase !== 'day' && game.phase !== 'dusk') {
+      toast('TOO LATE', 'Turrets can only be raised before nightfall.', 'warn');
+      Sound.deny();
+      return;
+    }
+    const activeCount = game.turrets.length;
+    const cap = 3 + statsBonus('turret');
+    if (activeCount >= cap) {
+      toast('TOO MANY TURRETS', `You can man ${cap} at once.`, 'warn');
+      Sound.deny();
+      return;
+    }
+    for (const k of Object.keys(def.cost)) {
+      if ((game.resources[k] || 0) < def.cost[k]) {
+        toast('NOT ENOUGH MATERIALS', `${def.label} needs ` + Object.keys(def.cost).map((k) => `${def.cost[k]} ${k}`).join(', ') + '.', 'warn');
+        Sound.deny();
+        return;
+      }
+    }
+    for (const k of Object.keys(def.cost)) game.resources[k] -= def.cost[k];
+    const away = 46;
+    const x = clamp(player.x + Math.cos(player.aim) * away, 40, WORLD.w - 40);
+    const y = clamp(player.y + Math.sin(player.aim) * away + 18, 40, WORLD.h - 40);
+    game.turrets.push({ type, x, y, timer: 0, angle: player.aim, spin: Math.random() * TAU, hp: 60 + statsBonus('turret') * 14 });
+    toast('TURRET RAISED', `${def.label} built. It fights on its own.`, 'good');
+    spawnSparks(x, y, 14, '#efb661', 1.7);
+    Sound.claim();
+  }
+
+  function updateTurrets(dt) {
+    for (const t of game.turrets) {
+      t.spin += dt * 0.5;
+      const def = TURRETS[t.type];
+      const target = nearestEnemy(t.x, t.y, def.range);
+      if (target) {
+        t.angle = Math.atan2(target.y - t.y, target.x - t.x);
+        t.timer -= dt;
+        if (t.timer <= 0) {
+          t.timer = def.rate;
+          turretFire(t, def, target);
+        }
+      } else {
+        t.timer = Math.max(0, t.timer - dt);
+      }
+    }
+  }
+
+  function turretFire(t, def, target) {
+    Sound.turretShot(t.type);
+    if (def.beam) {
+      // BFG: instant line of annihilation
+      const dx = target.x - t.x;
+      const dy = target.y - t.y;
+      const a = Math.atan2(dy, dx);
+      let hitCount = 0;
+      for (const e of game.enemies) {
+        if (e.dead) continue;
+        if (pointSegDist(e.x, e.y, t.x, t.y, t.x + dx * 1.4, t.y + dy * 1.4) < e.r + 10) {
+          damageEnemy(e, def.dmg, Math.cos(a) * 100, Math.sin(a) * 100);
+          hitCount++;
+        }
+      }
+      game.beams.push({ x1: t.x, y1: t.y, x2: t.x + Math.cos(a) * def.range, y2: t.y + Math.sin(a) * def.range, life: 0.24, color: '#9be86b' });
+      game.shake = Math.max(game.shake, 7);
+      return;
+    }
+    const a = t.angle + rand(-0.05, 0.05);
+    game.bullets.push({
+      x: t.x + Math.cos(a) * 18, y: t.y + Math.sin(a) * 18,
+      px: t.x, py: t.y,
+      vx: Math.cos(a) * def.speed, vy: Math.sin(a) * def.speed,
+      life: def.range / def.speed + 0.1,
+      dmg: def.dmg * (1 + statsBonus('turret') * 0.08),
+      owner: 'turret',
+      pierce: def.pierce || 0,
+      splash: def.splash || 0,
+      burn: def.burn ? 1.4 : 0,
+      color: def.color
+    });
+    if (t.type === 'cannon' || t.type === 'mortar') game.shake = Math.max(game.shake, 2);
+  }
+
+  function bossDefeated(boss) {
+    game.bossAlive = false;
+    banner('CONTAINED', boss.scp + ' DOWN', 'The night breaks. The chapter is done.', 'dawn', 4);
+    Sound.bossDefeated();
+    spawnSparks(boss.x, boss.y, 40, '#ffd970', 2.4);
+    for (let i = 0; i < 10; i++) {
+      setTimeout(() => {
+        if (game.mode === 'playing') spawnSparks(boss.x + rand(-40, 40), boss.y + rand(-40, 40), 12, '#ffd970', 2);
+      }, i * 160);
+    }
+    setTimeout(() => {
+      if (game.mode === 'playing' && game.phase === 'night') {
+        game.phaseTime = game.nightDuration; // dawn comes when the boss falls
+      }
+    }, 2200);
   }
 
   /* ---------------------------------------------------------------------
@@ -1817,36 +2694,48 @@
   function pickEnemyType() {
     const r = Math.random();
     const day = game.day + (game.chapter - 1) * 3;
-    if (day >= 3 && r < 0.13) return 'wraith';
-    if (day >= 2 && r < 0.31) return 'brute';
-    if (r < 0.58) return 'crawler';
+    if (day >= 5 && r < 0.12) return 'oldman';
+    if (day >= 3 && r < 0.27) return 'wraith';
+    if (day >= 2 && r < 0.5) return 'brute';
+    if (r < 0.76) return 'crawler';
     return 'walker';
   }
 
   function makeEnemy(type, x, y, raidShelterId) {
     const def = ENEMY_TYPES[type];
-    const scale = 1 + (game.day - 1) * 0.19 + (game.chapter - 1) * 0.28;
-    return {
+    const scale = 1 + (game.day - 1) * 0.22 + (game.chapter - 1) * 0.4;
+    const isBoss = !!def.boss;
+    const e = {
       type,
+      scp: def.scp,
+      label: def.scp,
+      boss: isBoss,
       x, y,
       r: def.r,
-      hp: def.hp * scale,
-      maxHp: def.hp * scale,
+      hp: def.hp * (isBoss ? 1 + (game.chapter - 1) * 0.8 : scale),
+      maxHp: def.hp,
       speed: def.speed + (game.day - 1) * 1.2 + (game.chapter - 1) * 3,
-      dmg: def.dmg + (game.day - 1) * 0.55 + (game.chapter - 1) * 1.2,
+      dmg: def.dmg + (game.day - 1) * 0.7 + (game.chapter - 1) * 1.6,
       atk: def.atk,
       wall: def.wall,
       ranged: !!def.ranged,
+      phase: !!def.phase,
+      xp: def.xp || 6,
       raidShelterId: raidShelterId || null,
       prefersCompanions: Math.random() < 0.34,
       atkTimer: rand(0.2, 0.9),
       fireTimer: rand(0.8, 2.4),
+      slow: 0,
+      burn: 0,
       hitFlash: 0,
       dead: false,
       seed: Math.random() * 10,
       angle: Math.random() * TAU,
+      roarTimer: 6,
       mode: 'player'
     };
+    e.maxHp = e.hp;
+    return e;
   }
 
   function spawnEnemyAround(center, raidShelterId) {
@@ -1908,7 +2797,23 @@
 
   function damagePlayer(amount) {
     if (game.mode !== 'playing' || player.invuln > 0) return;
-    game.health = Math.max(0, game.health - amount);
+    // Wardlight absorbs first, then armor, then Titan grit.
+    const gb = gearBonuses();
+    let armor = gb.armor * 0.012;
+    if (player.titan > 0) armor = Math.max(armor, 0.42);
+    let dmg = amount * (1 - clamp(armor, 0, 0.75));
+    if (player.inside && getActiveShelter() && getActiveShelter().state.integrity > 0) {
+      dmg *= 0.18; // thick walls between you and them
+    }
+    if (player.shieldHp > 0) {
+      const absorbed = Math.min(player.shieldHp, dmg);
+      player.shieldHp -= absorbed;
+      dmg -= absorbed;
+      spawnSparks(player.x, player.y, 5, '#ffd970', 0.9);
+      if (player.shieldHp <= 0) toast('WARD SHATTERED', 'The old light breaks. It will not answer again soon.', 'warn');
+    }
+    if (dmg <= 0) { player.invuln = 0.2; return; }
+    game.health = Math.max(0, game.health - dmg);
     player.invuln = 0.48;
     player.hitFlash = 0.24;
     game.shake = Math.max(game.shake, 9);
@@ -1977,6 +2882,33 @@
       e.atkTimer -= dt;
       e.fireTimer -= dt;
 
+      // status effects
+      if (e.burn > 0) {
+        e.burn = Math.max(0, e.burn - dt);
+        e.hp -= 14 * dt;
+        if (Math.random() < dt * 8) spawnSparks(e.x, e.y, 1, '#ff8a3f', 0.7);
+        if (e.hp <= 0) { killEnemy(e); continue; }
+      }
+      const slowed = e.slow > 0;
+      if (slowed) {
+        e.slow = Math.max(0, e.slow - dt);
+        if (Math.random() < dt * 3) spawnMist(e.x, e.y, 1, '#9bdcff');
+      }
+      const speedMul = slowed ? 0.35 : 1;
+
+      // Boss behavior: the reptile calls the night to itself.
+      if (e.boss) {
+        e.roarTimer -= dt;
+        if (e.roarTimer <= 0) {
+          e.roarTimer = 9;
+          game.shake = Math.max(game.shake, 15);
+          Sound.roar();
+          addText(e.x, e.y - e.r - 26, 'ROOOAR', '#ff6b4f');
+          spawnEnemyAround(e);
+          if (Math.random() < 0.6) spawnEnemyAround(e);
+        }
+      }
+
       let targetX = player.x;
       let targetY = player.y;
       let targetType = 'player';
@@ -2014,7 +2946,10 @@
 
       // Otherwise: hold the shelter wall, or hunt the player.
       if (!targetComp) {
-        if (!e.ranged && active && active.state.integrity > 0 && dist(player.x, player.y, active.x, active.y) < active.radius + 80) {
+        const insideWalls = player.inside && active && active.state.integrity > 0;
+        const pressedOnWalls = active && active.state.integrity > 0
+          && (insideWalls || dist(player.x, player.y, active.x, active.y) < active.radius + 80);
+        if (pressedOnWalls && !e.phase && !e.ranged && !e.boss) {
           targetType = 'wall';
           targetX = active.x;
           targetY = active.y;
@@ -2033,8 +2968,8 @@
         const stop = active.radius + 17;
         if (d > stop) {
           const a = Math.atan2(dy, dx) + Math.sin(game.time * 2.1 + e.seed) * 0.17;
-          e.x += Math.cos(a) * e.speed * dt;
-          e.y += Math.sin(a) * e.speed * dt;
+          e.x += Math.cos(a) * e.speed * speedMul * dt;
+          e.y += Math.sin(a) * e.speed * speedMul * dt;
           e.angle = a;
         } else {
           e.angle = Math.atan2(active.y - e.y, active.x - e.x);
@@ -2058,13 +2993,13 @@
           const desired = 245;
           if (d > desired + 50) {
             const a = Math.atan2(dy, dx);
-            e.x += Math.cos(a) * e.speed * dt;
-            e.y += Math.sin(a) * e.speed * dt;
+            e.x += Math.cos(a) * e.speed * speedMul * dt;
+            e.y += Math.sin(a) * e.speed * speedMul * dt;
             e.angle = a;
           } else if (d < desired - 70) {
             const a = Math.atan2(dy, dx);
-            e.x -= Math.cos(a) * e.speed * dt;
-            e.y -= Math.sin(a) * e.speed * dt;
+            e.x -= Math.cos(a) * e.speed * speedMul * dt;
+            e.y -= Math.sin(a) * e.speed * speedMul * dt;
             e.angle = a + Math.PI;
           } else {
             e.angle = Math.atan2(dy, dx);
@@ -2077,8 +3012,8 @@
           const stopDist = targetType === 'companion' ? e.r + 13 : e.r + player.r + 2;
           if (d > stopDist) {
             const a = Math.atan2(dy, dx) + Math.sin(game.time * 2.3 + e.seed) * 0.13;
-            e.x += Math.cos(a) * e.speed * dt;
-            e.y += Math.sin(a) * e.speed * dt;
+            e.x += Math.cos(a) * e.speed * speedMul * dt;
+            e.y += Math.sin(a) * e.speed * speedMul * dt;
             e.angle = a;
           } else {
             e.angle = Math.atan2(dy, dx);
@@ -2246,6 +3181,7 @@
     updateEnemies(dt);
     if (game.mode !== 'playing') return;
     updateBullets(dt);
+    updateTurrets(dt);
     updateProjectiles(dt);
     updateParticles(dt);
     updateInteraction();
@@ -2343,16 +3279,29 @@
 
     const phaseNames = { day: 'DAYLIGHT', dusk: 'DUSK', night: 'NIGHT', dawn: 'DAWN' };
     setText(DOM.dayLabel, `DAY ${game.day}`);
-    setText(DOM.phaseChip, phaseNames[game.phase] || 'DAYLIGHT');
+    setText(DOM.phaseChip, player.inside && game.phase === 'night' ? 'SHELTERED' : phaseNames[game.phase] || 'DAYLIGHT');
     DOM.phaseChip.className = 'phase-chip ' + game.phase;
-    DOM.statusPanel.className = 'status-panel glass phase-' + game.phase;
-    setText(DOM.mapTitle, `CH. ${roman(game.chapter)} · ${CHAPTERS[game.chapter - 1].name}`);
+    DOM.statusPanel.classList.remove('phase-day', 'phase-dusk', 'phase-night', 'phase-dawn');
+    DOM.statusPanel.classList.add('phase-' + game.phase);
+    setText(DOM.mapTitle, `CH. ${roman(game.chapter)} · ${regionOf(game.chapter).label}`);
 
     const remain = Math.max(0, game.phaseDuration - game.phaseTime);
-    if (game.phase === 'night') setText(DOM.timeLeft, `Dawn in ${fmtTime(remain)}`);
-    else if (game.phase === 'dawn') setText(DOM.timeLeft, 'Dawn');
-    else setText(DOM.timeLeft, `Nightfall in ${fmtTime(remain)}`);
-    DOM.timeFill.style.width = `${clamp((remain / game.phaseDuration) * 100, 0, 100)}%`;
+    if (game.phase === 'night') {
+      if (game.bossAlive) {
+        setText(DOM.timeLeft, 'Containment failed — kill it');
+        const boss = game.enemies.find((e) => e.boss && !e.dead);
+        DOM.timeFill.style.width = boss ? `${clamp((boss.hp / boss.maxHp) * 100, 0, 100)}%` : '100%';
+      } else {
+        setText(DOM.timeLeft, `Dawn in ${fmtTime(remain)}`);
+        DOM.timeFill.style.width = `${clamp((remain / game.phaseDuration) * 100, 0, 100)}%`;
+      }
+    } else if (game.phase === 'dawn') {
+      setText(DOM.timeLeft, 'Dawn');
+      DOM.timeFill.style.width = '100%';
+    } else {
+      setText(DOM.timeLeft, `Nightfall in ${fmtTime(remain)}`);
+      DOM.timeFill.style.width = `${clamp((remain / game.phaseDuration) * 100, 0, 100)}%`;
+    }
 
     const active = getActiveShelter();
     if (!active) setText(DOM.objective, game.phase === 'night' ? 'Survive the open' : 'Claim a shelter');
@@ -2365,10 +3314,18 @@
     DOM.healthFill.style.width = `${clamp((game.health / game.maxHealth) * 100, 0, 100)}%`;
     DOM.healthFill.classList.toggle('low', game.health < 30);
 
+    setText(DOM.levelText, `LV ${game.level}`);
+    DOM.xpFill.style.width = `${clamp((game.xp / game.xpNext) * 100, 0, 100)}%`;
+    setText(DOM.statPointsText, `${game.statPoints} SP`);
+
     setText(DOM.woodCount, String(game.resources.wood));
     setText(DOM.stoneCount, String(game.resources.stone));
     setText(DOM.scrapCount, String(game.resources.scrap));
     setText(DOM.weaponTier, WEAPONS[game.weaponTier - 1].short);
+
+    setText(DOM.focusText, String(Math.round(game.focus)));
+    if (DOM.focusFill) DOM.focusFill.style.width = `${clamp((game.focus / game.maxFocus) * 100, 0, 100)}%`;
+    if (DOM.turretText) setText(DOM.turretText, `TURRETS — ${game.turrets.length} / ${3 + statsBonus('turret')}`);
 
     const dread = 1 + (game.day - 1) * 0.16 + game.nightsHeld * 0.02 + (game.chapter - 1) * 0.3;
     setText(DOM.dreadLabel, `DREAD ${dread.toFixed(1)}`);
@@ -2441,6 +3398,7 @@
       setText(DOM.weaponUpgradeDesc, next ? `${next.short} — more damage, faster fire` : 'Maximum tier reached');
       DOM.weaponBtn.disabled = game.weaponTier >= WEAPONS.length || game.resources.scrap < cost;
     }
+    updateAbilityBar();
   }
 
   function updateCrosshair() {
@@ -2495,8 +3453,33 @@
 
   function drawGround(bounds) {
     const { left, top, right, bottom } = bounds;
-    ctx.fillStyle = '#101a14';
+    const region = regionOf(game.chapter);
+    ctx.fillStyle = region.ground || '#101a14';
     ctx.fillRect(left - 80, top - 80, right - left + 160, bottom - top + 160);
+
+    // lakeside water
+    if (terrain.lake) {
+      const lk = terrain.lake;
+      if (lk.x + lk.rx * 1.4 > left && lk.x - lk.rx * 1.4 < right && lk.y + lk.ry * 1.4 > top && lk.y - lk.ry * 1.4 < bottom) {
+        ctx.fillStyle = 'rgba(16,26,26,0.9)';
+        ctx.beginPath();
+        ctx.ellipse(lk.x, lk.y, lk.rx, lk.ry, 0, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = region.key === 'sonora' ? 'rgba(52,72,66,0.5)' : 'rgba(36,60,64,0.55)';
+        ctx.beginPath();
+        ctx.ellipse(lk.x, lk.y, lk.rx * 0.92, lk.ry * 0.88, 0, 0, TAU);
+        ctx.fill();
+        // shore shimmer
+        ctx.strokeStyle = 'rgba(140,180,180,0.1)';
+        ctx.lineWidth = 1.4;
+        for (let i = 0; i < 5; i++) {
+          const t = game.time * 0.5 + i * 2.1;
+          ctx.beginPath();
+          ctx.ellipse(lk.x, lk.y, lk.rx * (0.3 + ((i / 5) + (t % 0.2)) * 0.55), lk.ry * (0.3 + (i / 5) * 0.55), 0, 0, TAU);
+          ctx.stroke();
+        }
+      }
+    }
 
     for (const p of terrain.patches) {
       if (p.x + p.rx < left || p.x - p.rx > right || p.y + p.ry < top || p.y - p.ry > bottom) continue;
@@ -2555,38 +3538,423 @@
       ctx.ellipse(r.x + 2, r.y + 3, r.r * 0.8, r.r * 0.45, 0, 0, TAU);
       ctx.fill();
     }
+
+    // regional decoration
+    for (const d of terrain.decor) {
+      if (d.x < left || d.x > right || d.y < top || d.y > bottom) continue;
+      ctx.save();
+      ctx.translate(d.x, d.y);
+      ctx.scale(d.s, d.s);
+      ctx.fillStyle = 'rgba(3,8,6,0.32)';
+      ctx.beginPath();
+      ctx.ellipse(4, 6, 15, 7, 0, 0, TAU);
+      ctx.fill();
+      if (d.kind === 'logs') {
+        ctx.rotate(d.rot * 0.25);
+        ctx.fillStyle = '#5a4128';
+        rr(-16, -5, 32, 10, 5); ctx.fill();
+        ctx.fillStyle = '#8a653c';
+        ctx.beginPath(); ctx.arc(-16, 0, 5, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#6d4d2e';
+        ctx.beginPath(); ctx.arc(-16, 0, 2, 0, TAU); ctx.fill();
+      } else if (d.kind === 'skulls') {
+        ctx.rotate(d.rot * 0.3);
+        if (d.alt) {
+          // agave
+          ctx.strokeStyle = '#5b7146';
+          ctx.lineWidth = 3.4;
+          ctx.lineCap = 'round';
+          for (let i = -3; i <= 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, 6);
+            ctx.quadraticCurveTo(i * 3.5, -2, i * 5, -13 - Math.abs(i) * -1);
+            ctx.stroke();
+          }
+          ctx.fillStyle = '#6d844f';
+          ctx.beginPath(); ctx.arc(0, 5, 4, 0, TAU); ctx.fill();
+        } else {
+          // weathered bovine skull
+          ctx.fillStyle = '#d8cdb6';
+          ctx.beginPath();
+          ctx.ellipse(0, -4, 7, 9, 0, 0, TAU);
+          ctx.fill();
+          ctx.fillStyle = '#a89b83';
+          ctx.fillRect(-4, 3, 8, 5);
+          ctx.fillStyle = '#3a3220';
+          ctx.beginPath(); ctx.arc(-3, -3, 1.8, 0, TAU); ctx.arc(3, -3, 1.8, 0, TAU); ctx.fill();
+          ctx.strokeStyle = '#d8cdb6';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-7, -8); ctx.lineTo(-13, -13);
+          ctx.moveTo(7, -8); ctx.lineTo(13, -13);
+          ctx.stroke();
+        }
+      } else {
+        // stone lantern / torii fragments for Kanto
+        if (d.alt) {
+          ctx.fillStyle = '#6d7268';
+          ctx.fillRect(-4, -4, 8, 11);
+          ctx.fillStyle = '#8a8f81';
+          rr(-9, -14, 18, 10, 3); ctx.fill();
+          ctx.fillStyle = 'rgba(233,180,90,0.75)';
+          ctx.fillRect(-4, -11, 8, 5);
+        } else {
+          ctx.rotate(d.rot * 0.2);
+          ctx.strokeStyle = '#7a4436';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(-9, 8); ctx.lineTo(-9, -10);
+          ctx.moveTo(9, 8); ctx.lineTo(9, -10);
+          ctx.stroke();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#8d5141';
+          ctx.beginPath();
+          ctx.moveTo(-14, -11); ctx.quadraticCurveTo(0, -14, 14, -11);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
   }
 
   function drawTrees(bounds) {
     const { left, top, right, bottom } = bounds;
-    const palettes = [
-      ['#16251c', '#1d3125', '#29402d'],
-      ['#18251b', '#203224', '#2c452f'],
-      ['#142119', '#1b2b20', '#243827']
-    ];
+    const region = regionOf(game.chapter);
+    const kind = region.treeKind;
     for (const t of terrain.trees) {
       if (t.x + t.r * 2 < left || t.x - t.r * 2 > right || t.y + t.r * 2 < top || t.y - t.r * 2 > bottom) continue;
-      const pal = palettes[t.tone];
+      const pal = region.treePal[t.tone];
       ctx.fillStyle = 'rgba(3,8,6,0.38)';
       ctx.beginPath();
       ctx.ellipse(t.x + 9, t.y + 12, t.r * 1.25, t.r * 0.7, 0.3, 0, TAU);
       ctx.fill();
-      ctx.fillStyle = '#2a2118';
-      ctx.fillRect(t.x - 3, t.y - 2, 6, t.r * 0.95);
       const sway = Math.sin(game.time * 0.6 + t.sway) * 1.5;
-      ctx.fillStyle = pal[0];
+      if (kind === 'pine') {
+        ctx.fillStyle = '#2a2118';
+        ctx.fillRect(t.x - 3, t.y - 2, 6, t.r * 0.95);
+        ctx.fillStyle = pal[0];
+        for (let i = 0; i < 3; i++) {
+          const w = t.r * (1 - i * 0.24);
+          const yy = t.y - t.r * 0.34 * i;
+          ctx.beginPath();
+          ctx.moveTo(t.x + sway * (0.4 + i * 0.2), yy - t.r * 0.62);
+          ctx.lineTo(t.x + w, yy);
+          ctx.lineTo(t.x - w, yy);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = pal[1];
+        }
+        ctx.fillStyle = pal[2];
+        ctx.beginPath();
+        ctx.arc(t.x + sway, t.y - t.r * 1.9, t.r * 0.24, 0, TAU);
+        ctx.fill();
+      } else if (kind === 'cactus') {
+        ctx.fillStyle = pal[0];
+        rr(t.x - 4, t.y - t.r * 1.7, 8, t.r * 2, 4); ctx.fill();
+        if (t.tone !== 2) {
+          rr(t.x - t.r * 0.8, t.y - t.r * 1.15, t.r * 0.8, 6, 3); ctx.fill();
+          rr(t.x - t.r * 0.8, t.y - t.r * 1.6, 6, t.r * 0.55, 3); ctx.fill();
+        }
+        if (t.tone !== 1) {
+          rr(t.x + t.r * 0.15, t.y - t.r * 1.45, t.r * 0.75, 6, 3); ctx.fill();
+          rr(t.x + t.r * 0.45, t.y - t.r * 1.85, 6, t.r * 0.5, 3); ctx.fill();
+        }
+        ctx.fillStyle = pal[1];
+        rr(t.x - 4, t.y - t.r * 1.7, 4, t.r * 2, 4); ctx.fill();
+        ctx.fillStyle = 'rgba(255,240,200,0.14)';
+        rr(t.x - 3, t.y - t.r * 1.6, 1.6, t.r * 1.8, 1); ctx.fill();
+      } else {
+        // bamboo: thin pale stalks in clumps plus leaf strokes
+        const n = 3;
+        for (let i = 0; i < n; i++) {
+          const ox = (i - 1) * 7 + Math.sin(game.time * 0.5 + t.sway + i) * 1.4;
+          ctx.strokeStyle = pal[i];
+          ctx.lineWidth = 3.2;
+          ctx.beginPath();
+          ctx.moveTo(t.x + ox, t.y);
+          ctx.lineTo(t.x + ox + sway, t.y - t.r * 1.6);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(230,240,220,0.16)';
+          ctx.fillRect(t.x + ox - 1.6, t.y - t.r * 1.2, 3.2, 2);
+          ctx.fillStyle = pal[2];
+          ctx.beginPath();
+          ctx.moveTo(t.x + ox + sway, t.y - t.r * 1.6);
+          ctx.quadraticCurveTo(t.x + ox + 9 + sway, t.y - t.r * 1.85, t.x + ox + 14 + sway, t.y - t.r * 1.7);
+          ctx.quadraticCurveTo(t.x + ox + 8 + sway, t.y - t.r * 1.55, t.x + ox + sway, t.y - t.r * 1.55);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  function drawLogCabin(warm) {
+    ctx.fillStyle = '#2c241d';
+    rr(-62, -36, 124, 72, 8);
+    ctx.fill();
+    ctx.fillStyle = '#352a20';
+    rr(-56, -30, 112, 58, 4);
+    ctx.fill();
+    // log lines
+    ctx.strokeStyle = 'rgba(96,70,42,0.35)';
+    ctx.lineWidth = 2;
+    for (let y = -16; y <= 24; y += 9) {
       ctx.beginPath();
-      ctx.arc(t.x + sway, t.y - t.r * 0.38, t.r, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = pal[1];
+      ctx.moveTo(-56, y);
+      ctx.lineTo(56, y);
+      ctx.stroke();
+    }
+    // roof
+    ctx.fillStyle = '#241d18';
+    ctx.beginPath();
+    ctx.moveTo(-74, -46);
+    ctx.lineTo(74, -46);
+    ctx.lineTo(58, 4);
+    ctx.lineTo(-58, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(120,92,62,0.24)';
+    ctx.lineWidth = 1;
+    for (let i = -64; i <= 64; i += 16) {
       ctx.beginPath();
-      ctx.arc(t.x - t.r * 0.42, t.y - t.r * 0.5, t.r * 0.74, 0, TAU);
-      ctx.arc(t.x + t.r * 0.48, t.y - t.r * 0.52, t.r * 0.67, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = pal[2];
+      ctx.moveTo(i, -42);
+      ctx.lineTo(i * 0.78, 1);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(150,116,76,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(-68, -42);
+    ctx.lineTo(68, -42);
+    ctx.stroke();
+    // chimney
+    ctx.fillStyle = '#3f3328';
+    ctx.fillRect(34, -57, 13, 20);
+    ctx.fillStyle = 'rgba(160,130,95,0.18)';
+    ctx.fillRect(34, -57, 13, 3);
+    // windows
+    drawShelterWindows(warm);
+    // door
+    ctx.fillStyle = '#1c1713';
+    ctx.fillRect(-12, 17, 24, 21);
+    ctx.strokeStyle = '#4a3a28';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-12, 17, 24, 21);
+    ctx.fillStyle = 'rgba(239,182,97,0.32)';
+    ctx.fillRect(-9, 20, 18, 1);
+  }
+
+  function drawShelterWindows(warm) {
+    ctx.fillStyle = warm ? '#f0ad5d' : '#4a3b2b';
+    ctx.fillRect(-42, -16, 18, 14);
+    ctx.fillRect(26, -16, 18, 14);
+    // shutter halves
+    ctx.strokeStyle = '#2a2019';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-42, -16, 18, 14);
+    ctx.strokeRect(26, -16, 18, 14);
+    ctx.beginPath();
+    ctx.moveTo(-33, -16); ctx.lineTo(-33, -2);
+    ctx.moveTo(35, -16); ctx.lineTo(35, -2);
+    ctx.stroke();
+    if (warm) {
+      ctx.fillStyle = 'rgba(240,173,93,0.16)';
       ctx.beginPath();
-      ctx.arc(t.x - t.r * 0.2 + sway, t.y - t.r * 0.88, t.r * 0.43, 0, TAU);
+      ctx.ellipse(-33, -9, 16, 12, 0, 0, TAU);
       ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(35, -9, 16, 12, 0, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  function drawAdobeCabin(warm) {
+    // sun-baked walls and red clay tile
+    ctx.fillStyle = '#c9b493';
+    rr(-58, -34, 116, 68, 4);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(122,96,58,0.35)';
+    rr(-58, -34, 116, 10, 4);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(90,68,44,0.25)';
+    rr(-56, 18, 112, 16, 3);
+    ctx.fill();
+    // tile roof
+    ctx.fillStyle = '#8d4434';
+    ctx.beginPath();
+    ctx.moveTo(-78, -44);
+    ctx.lineTo(78, -44);
+    ctx.lineTo(64, -2);
+    ctx.lineTo(-64, -2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(52,26,20,0.5)';
+    ctx.lineWidth = 2;
+    for (let i = -70; i <= 70; i += 13) {
+      ctx.beginPath();
+      ctx.moveTo(i, -42);
+      ctx.lineTo(i * 0.82, -4);
+      ctx.stroke();
+    }
+    // bell tower / torre
+    ctx.fillStyle = '#bfa987';
+    rr(40, -68, 22, 42, 3);
+    ctx.fill();
+    ctx.fillStyle = '#5d3527';
+    ctx.beginPath();
+    ctx.moveTo(36, -70);
+    ctx.lineTo(66, -70);
+    ctx.lineTo(51, -84);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = warm ? '#f0ad5d' : '#3a2a20';
+    ctx.beginPath();
+    ctx.arc(51, -50, 6, 0, TAU);
+    ctx.fill();
+    // arched doorway
+    ctx.fillStyle = '#2a1c12';
+    ctx.beginPath();
+    ctx.moveTo(-14, 34);
+    ctx.lineTo(-14, 12);
+    ctx.arc(0, 12, 14, Math.PI, 0);
+    ctx.lineTo(14, 34);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8a6a44';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // faded mural
+    ctx.fillStyle = 'rgba(180,90,60,0.5)';
+    ctx.fillRect(-52, 2, 14, 14);
+    ctx.fillStyle = 'rgba(60,140,120,0.4)';
+    ctx.fillRect(-36, 2, 14, 14);
+  }
+
+  function drawShrineCabin(warm) {
+    // dark timber, curved roof, paper lanterns
+    ctx.fillStyle = '#241f1a';
+    rr(-58, -30, 116, 62, 3);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(120,96,60,0.3)';
+    ctx.lineWidth = 1.4;
+    for (let x = -58; x <= 58; x += 14) {
+      ctx.beginPath();
+      ctx.moveTo(x, -28);
+      ctx.lineTo(x, 26);
+      ctx.stroke();
+    }
+    // curved roof
+    ctx.fillStyle = '#171310';
+    ctx.beginPath();
+    ctx.moveTo(-84, -34);
+    ctx.quadraticCurveTo(0, -74, 84, -34);
+    ctx.lineTo(74, -22);
+    ctx.quadraticCurveTo(0, -58, -74, -22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(220,90,60,0.28)';
+    ctx.beginPath();
+    ctx.moveTo(-60, -44);
+    ctx.quadraticCurveTo(0, -70, 60, -44);
+    ctx.lineTo(56, -39);
+    ctx.quadraticCurveTo(0, -63, -56, -39);
+    ctx.closePath();
+    ctx.fill();
+    // torii gate in front
+    ctx.strokeStyle = '#a33b2c';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-46, 40); ctx.lineTo(-46, 6);
+    ctx.moveTo(46, 40); ctx.lineTo(46, 6);
+    ctx.stroke();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#b84534';
+    ctx.beginPath();
+    ctx.moveTo(-56, 2);
+    ctx.quadraticCurveTo(0, -6, 56, 2);
+    ctx.stroke();
+    // paper lanterns
+    const glow = warm ? 0.85 : 0.4;
+    ctx.fillStyle = `rgba(238,168,94,${glow})`;
+    for (const lx of [-36, 38]) {
+      ctx.beginPath();
+      ctx.ellipse(lx, -2, 6, 8, 0, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(40,20,12,0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(lx - 6, -2); ctx.lineTo(lx + 6, -2);
+      ctx.stroke();
+    }
+    // sliding door
+    ctx.fillStyle = '#14100c';
+    ctx.fillRect(-14, 6, 28, 28);
+    ctx.strokeStyle = '#6d5334';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-14, 10 + i * 7);
+      ctx.lineTo(14, 10 + i * 7);
+      ctx.stroke();
+    }
+    drawShelterWindows(warm);
+  }
+
+  function drawTurrets(bounds) {
+    for (const t of game.turrets) {
+      if (t.x < bounds.left - 80 || t.x > bounds.right + 80 || t.y < bounds.top - 80 || t.y > bounds.bottom + 80) continue;
+      const def = TURRETS[t.type];
+      ctx.fillStyle = 'rgba(2,5,4,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(t.x, t.y + 8, 17, 8, 0, 0, TAU);
+      ctx.fill();
+      // sandbag base
+      ctx.fillStyle = '#6b5836';
+      rr(t.x - 13, t.y - 4, 26, 12, 5);
+      ctx.fill();
+      ctx.fillStyle = '#84704a';
+      rr(t.x - 13, t.y - 10, 26, 8, 4);
+      ctx.fill();
+      // body
+      ctx.save();
+      ctx.translate(t.x, t.y - 12);
+      ctx.rotate(t.angle);
+      ctx.fillStyle = '#3a4438';
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = def.color || '#d8c08a';
+      ctx.fillRect(4, -2.6, 13 + (t.type === 'cannon' || t.type === 'mortar' ? 5 : 0), 5.2);
+      if (t.type === 'flame') {
+        ctx.strokeStyle = 'rgba(224,123,67,0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(18, 0);
+        ctx.lineTo(30, Math.sin(game.time * 7 + t.spin) * 4);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#1d241c';
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.4, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawBeams() {
+    for (let i = game.beams.length - 1; i >= 0; i--) {
+      const b = game.beams[i];
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = b.color;
+      ctx.globalAlpha = clamp(b.life / 0.24, 0, 1);
+      ctx.lineWidth = 6;
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.moveTo(b.x1, b.y1);
+      ctx.lineTo(b.x2, b.y2);
+      ctx.stroke();
+      ctx.restore();
+      game.beams.splice(i, 1);
     }
   }
 
@@ -2641,69 +4009,17 @@
     // barricade ring
     if (st.owned) drawBarricade(s);
 
-    // cabin
+    // cabin — styled by region: log house / adobe hacienda / kanto shrine
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.fillStyle = 'rgba(2,5,4,0.42)';
     ctx.beginPath();
     ctx.ellipse(11, 28, 84, 42, 0.08, 0, TAU);
     ctx.fill();
-
-    ctx.fillStyle = '#2c241d';
-    rr(-62, -36, 124, 72, 8);
-    ctx.fill();
-    ctx.fillStyle = '#352a20';
-    rr(-56, -30, 112, 58, 4);
-    ctx.fill();
-
-    // roof
-    ctx.fillStyle = '#241d18';
-    ctx.beginPath();
-    ctx.moveTo(-74, -46);
-    ctx.lineTo(74, -46);
-    ctx.lineTo(58, 4);
-    ctx.lineTo(-58, 4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(120,92,62,0.24)';
-    ctx.lineWidth = 1;
-    for (let i = -64; i <= 64; i += 16) {
-      ctx.beginPath();
-      ctx.moveTo(i, -42);
-      ctx.lineTo(i * 0.78, 1);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = 'rgba(150,116,76,0.3)';
-    ctx.beginPath();
-    ctx.moveTo(-68, -42);
-    ctx.lineTo(68, -42);
-    ctx.stroke();
-
-    // chimney
-    ctx.fillStyle = '#3f3328';
-    ctx.fillRect(34, -57, 13, 20);
-    ctx.fillStyle = 'rgba(160,130,95,0.18)';
-    ctx.fillRect(34, -57, 13, 3);
-
-    // windows
     const warm = st.owned;
-    ctx.fillStyle = warm ? '#f0ad5d' : '#4a3b2b';
-    ctx.fillRect(-42, -16, 18, 14);
-    ctx.fillRect(26, -16, 18, 14);
-    ctx.strokeStyle = '#1b1511';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-42, -16, 18, 14);
-    ctx.strokeRect(26, -16, 18, 14);
-    ctx.beginPath();
-    ctx.moveTo(-33, -16); ctx.lineTo(-33, -2);
-    ctx.moveTo(35, -16); ctx.lineTo(35, -2);
-    ctx.stroke();
-
-    // door
-    ctx.fillStyle = '#1c1713';
-    ctx.fillRect(-12, 17, 24, 21);
-    ctx.fillStyle = 'rgba(239,182,97,0.32)';
-    ctx.fillRect(-9, 20, 18, 1);
+    if (s.style === 'sonora') drawAdobeCabin(warm);
+    else if (s.style === 'kanto') drawShrineCabin(warm);
+    else drawLogCabin(warm);
 
     // fire pit
     const pulse = Math.sin(game.time * 8.5 + s.x) * 0.5 + 0.5;
@@ -2886,6 +4202,7 @@
     ctx.beginPath();
     ctx.ellipse(0, 14 * size, 13 * size, 6 * size, 0, 0, TAU);
     ctx.fill();
+    // boots
     const leg = Math.sin(walk) * 4;
     ctx.strokeStyle = '#1d2522';
     ctx.lineWidth = 4 * size;
@@ -2896,6 +4213,12 @@
     ctx.moveTo(4 * size, 7 * size);
     ctx.lineTo(4 * size - leg, 16 * size);
     ctx.stroke();
+    ctx.fillStyle = '#141a17';
+    ctx.beginPath();
+    ctx.ellipse(-4 * size + leg, 16.5 * size, 2.4 * size, 1.5 * size, 0, 0, TAU);
+    ctx.ellipse(4 * size - leg, 16.5 * size, 2.4 * size, 1.5 * size, 0, 0, TAU);
+    ctx.fill();
+    // torso with flap shading + belt
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.ellipse(0, 1, 9 * size, 12 * size, 0, 0, TAU);
@@ -2904,6 +4227,10 @@
     ctx.beginPath();
     ctx.ellipse(-2 * size, -2 * size, 4 * size, 6 * size, 0.3, 0, TAU);
     ctx.fill();
+    ctx.fillStyle = 'rgba(10,14,12,0.55)';
+    ctx.fillRect(-9 * size, 7 * size, 18 * size, 2.4 * size);
+    ctx.fillStyle = '#c9b489';
+    ctx.fillRect(-1.6 * size, 7 * size, 3.2 * size, 2.4 * size);
     // gun arm
     ctx.save();
     ctx.rotate(angle);
@@ -2916,11 +4243,42 @@
     ctx.fillStyle = '#3b4642';
     ctx.fillRect(13 * size, -1 * size, 10 * size, 3 * size);
     ctx.restore();
-    // head
+    // head — skin, then face
     ctx.fillStyle = '#caa27d';
     ctx.beginPath();
     ctx.arc(0, -10 * size, 6 * size, 0, TAU);
     ctx.fill();
+    ctx.fillStyle = 'rgba(150,104,66,0.4)'; // cheek shade
+    ctx.beginPath();
+    ctx.ellipse(-2 * size, -9 * size, 1.2 * size, 1.6 * size, 0, 0, TAU);
+    ctx.fill();
+    // eyes (whites, then pupils, then brows)
+    const blinkOn = opts.blink && Math.random() < 0.04;
+    if (!blinkOn) {
+      ctx.fillStyle = '#f4ede0';
+      ctx.beginPath();
+      ctx.ellipse(-2.3 * size, -10.4 * size, 1.5 * size, 1.05 * size, 0, 0, TAU);
+      ctx.ellipse(2.3 * size, -10.4 * size, 1.5 * size, 1.05 * size, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#2a211c';
+      const look = clamp(Math.sin(angle * 3), -1, 1) * 0.5;
+      ctx.beginPath();
+      ctx.arc(-2.2 * size + look, -10.4 * size, 0.7 * size, 0, TAU);
+      ctx.arc(2.4 * size + look, -10.4 * size, 0.7 * size, 0, TAU);
+      ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(52,38,28,0.85)';
+    ctx.lineWidth = 0.7 * size;
+    ctx.beginPath();
+    ctx.moveTo(-3.2 * size, -11.8 * size); ctx.lineTo(-1.4 * size, -11.9 * size);
+    ctx.moveTo(1.4 * size, -11.9 * size); ctx.lineTo(3.2 * size, -11.8 * size);
+    ctx.stroke();
+    // mouth
+    ctx.strokeStyle = 'rgba(96,52,40,0.75)';
+    ctx.lineWidth = 0.8 * size;
+    ctx.beginPath();
+    ctx.arc(0, -8.2 * size, 1.1 * size, 0.25, Math.PI - 0.25);
+    ctx.stroke();
     if (opts.hat) {
       ctx.fillStyle = opts.hat;
       ctx.beginPath();
@@ -2929,8 +4287,12 @@
       ctx.beginPath();
       ctx.arc(0, -15.5 * size, 4.5 * size, 0, TAU);
       ctx.fill();
+      ctx.fillStyle = 'rgba(255,244,220,0.08)';
+      ctx.beginPath();
+      ctx.ellipse(-2 * size, -15.2 * size, 3.4 * size, 2.4 * size, 0.3, 0, TAU);
+      ctx.fill();
     }
-    // lantern
+    // lantern — wild survivors carry this one
     if (opts.lantern) {
       ctx.fillStyle = 'rgba(248,180,90,0.28)';
       ctx.beginPath();
@@ -2963,7 +4325,7 @@
     ctx.moveTo(4, 7);
     ctx.lineTo(4 - leg, 17);
     ctx.stroke();
-    // coat
+    // coat with split flap + belt + scarf
     ctx.fillStyle = '#3c514c';
     ctx.beginPath();
     ctx.ellipse(0, 1, 10, 13, 0, 0, TAU);
@@ -2971,6 +4333,18 @@
     ctx.fillStyle = '#4c6660';
     ctx.beginPath();
     ctx.ellipse(-2, -1, 5, 7, 0.25, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(10,14,12,0.6)';
+    ctx.fillRect(-10, 7.5, 20, 2.6);
+    ctx.fillStyle = '#c9b489';
+    ctx.fillRect(-1.8, 7.5, 3.6, 2.6);
+    // scarf tail
+    ctx.fillStyle = '#5e8681';
+    ctx.beginPath();
+    ctx.moveTo(2, -4);
+    ctx.quadraticCurveTo(9, -1 + Math.sin(game.time * 4) * 1.6, 8, 4);
+    ctx.quadraticCurveTo(5, 3, 2, -2);
+    ctx.closePath();
     ctx.fill();
     // lantern
     ctx.fillStyle = 'rgba(248,180,90,0.3)';
@@ -2995,17 +4369,47 @@
     ctx.fillStyle = '#8c7a5e';
     ctx.fillRect(23, -1, 4, 2.5);
     ctx.restore();
-    // head + hat
+    // head + hat + face turned toward the aim
     ctx.fillStyle = '#d0a77f';
     ctx.beginPath();
     ctx.arc(0, -10, 6.4, 0, TAU);
     ctx.fill();
+    ctx.fillStyle = 'rgba(150,104,66,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(-2.4, -9, 1.4, 1.8, 0, 0, TAU);
+    ctx.fill();
+    const faceTurn = clamp(Math.cos(player.aim), -1, 1);
+    ctx.fillStyle = '#f4ede0';
+    ctx.beginPath();
+    ctx.ellipse(-2.4 + faceTurn * 1.2, -10.6, 1.6, 1.1, 0, 0, TAU);
+    ctx.ellipse(2.4 + faceTurn * 1.2, -10.6, 1.6, 1.1, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#2a211c';
+    ctx.beginPath();
+    ctx.arc(-2.3 + faceTurn * 1.4, -10.6, 0.8, 0, TAU);
+    ctx.arc(2.5 + faceTurn * 1.4, -10.6, 0.8, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(52,38,28,0.85)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-3.4, -12.1); ctx.lineTo(-1.4, -12.2);
+    ctx.moveTo(1.4, -12.2); ctx.lineTo(3.4, -12.1);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(96,52,40,0.8)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.arc(0.6, -8, 1.15, 0.2, Math.PI - 0.2);
+    ctx.stroke();
     ctx.fillStyle = '#2c3a35';
     ctx.beginPath();
     ctx.ellipse(0, -14.5, 9.5, 3.6, 0, 0, TAU);
     ctx.fill();
     ctx.beginPath();
     ctx.arc(0, -16, 4.6, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,244,220,0.09)';
+    ctx.beginPath();
+    ctx.ellipse(-2.6, -16.8, 3.9, 2.5, 0.3, 0, TAU);
     ctx.fill();
     if (player.hitFlash > 0) {
       ctx.fillStyle = `rgba(255,90,70,${player.hitFlash * 2.2})`;
@@ -3085,83 +4489,472 @@
     if (e.dead) return;
     const def = ENEMY_TYPES[e.type];
     const wob = Math.sin(game.time * 4 + e.seed);
-    const s = e.type === 'brute' ? 1.35 : e.type === 'crawler' ? 0.78 : 1;
+    const rage = e.type === 'brute' ? (1 - clamp(e.hp / e.maxHp, 0, 1)) : 0;
     ctx.save();
     ctx.translate(e.x, e.y);
+
+    // ground shadow
     ctx.fillStyle = 'rgba(2,4,4,0.5)';
     ctx.beginPath();
-    ctx.ellipse(0, 12 * s, 12 * s, 5.5 * s, 0, 0, TAU);
+    ctx.ellipse(0, 12, 13 * (e.r / 12), 5.5 * (e.r / 12), 0, 0, TAU);
     ctx.fill();
-    if (e.type === 'wraith') {
-      ctx.globalAlpha = 0.78 + wob * 0.08;
-      ctx.fillStyle = def.color;
-      ctx.beginPath();
-      ctx.moveTo(-9, 8);
-      ctx.quadraticCurveTo(-14 + wob * 2, -8, 0, -18);
-      ctx.quadraticCurveTo(14 + wob * 2, -8, 9, 8);
-      ctx.quadraticCurveTo(4, 14, 0, 8);
-      ctx.quadraticCurveTo(-4, 14, -9, 8);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(150,95,190,0.35)';
-      ctx.lineWidth = 1.2;
-      for (let i = -1; i <= 1; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * 4, 4);
-        ctx.quadraticCurveTo(i * 7 + wob * 3, 14, i * 5, 18);
-        ctx.stroke();
-      }
-    } else {
-      const leg = Math.sin(game.time * 7 + e.seed) * 3;
-      ctx.strokeStyle = '#160f12';
-      ctx.lineWidth = 3.4 * s;
+
+    if (e.type === 'walker') {
+      // SCP-173 — the sculpture: rough poured concrete, spray-ruined face
+      ctx.strokeStyle = '#5c5344';
+      ctx.lineWidth = 3.2;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(-3 * s, 5 * s);
-      ctx.lineTo(-3 * s + leg, 13 * s);
-      ctx.moveTo(3 * s, 5 * s);
-      ctx.lineTo(3 * s - leg, 13 * s);
+      ctx.moveTo(-3, 5); ctx.lineTo(-3, 11);
+      ctx.moveTo(3, 5); ctx.lineTo(3, 11);
+      ctx.stroke();
+      ctx.fillStyle = def.dark;
+      ctx.beginPath();
+      ctx.moveTo(-6.5, 6); ctx.quadraticCurveTo(-9, -3, -5.5, -8);
+      ctx.lineTo(5.5, -8); ctx.quadraticCurveTo(9, -3, 6.5, 6);
+      ctx.quadraticCurveTo(0, 8.5, -6.5, 6);
+      ctx.fill();
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.moveTo(-5, 4.5); ctx.quadraticCurveTo(-7, -2, -4.5, -7);
+      ctx.lineTo(4.5, -7); ctx.quadraticCurveTo(7, -2, 5, 4.5);
+      ctx.quadraticCurveTo(0, 7, -5, 4.5);
+      ctx.fill();
+      // stubby arms ready to snap
+      ctx.strokeStyle = def.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-5, -3); ctx.lineTo(-9.5, -6);
+      ctx.moveTo(5, -3); ctx.lineTo(9.5, -6);
+      ctx.stroke();
+      // concrete speckle
+      ctx.fillStyle = 'rgba(90,82,64,0.5)';
+      for (let i = 0; i < 7; i++) {
+        const sx = ((e.seed * 97 + i * 31) % 9) - 4.5;
+        const sy = -6 + ((e.seed * 53 + i * 17) % 11);
+        ctx.fillRect(sx, sy, 1.4, 1.4);
+      }
+      // spray marks on the face
+      ctx.fillStyle = 'rgba(90,150,60,0.5)';
+      ctx.beginPath();
+      ctx.ellipse(-2.4, -12.4, 2.6, 1.7, -0.5, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(180,60,40,0.45)';
+      ctx.beginPath();
+      ctx.ellipse(2.2, -11.6, 2, 2.6, 0.6, 0, TAU);
+      ctx.fill();
+      // face — brow and mouth of hatred
+      ctx.fillStyle = def.eye;
+      ctx.beginPath();
+      ctx.arc(-2, -10.2, 1.05, 0, TAU);
+      ctx.arc(2, -10.2, 1.05, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(70,30,20,0.9)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, -7.6, 1.5, 0.3, Math.PI - 0.3, true);
+      ctx.stroke();
+    } else if (e.type === 'crawler') {
+      // SCP-939 — voice mimic: low blind quadruped, false eyes stitched
+      ctx.strokeStyle = def.dark;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      const leg = Math.sin(game.time * 9 + e.seed) * 3.4;
+      for (let i = -1; i <= 1; i += 2) {
+        ctx.beginPath();
+        ctx.moveTo(i * 5, 4); ctx.lineTo(i * 8 + leg, 9);
+        ctx.moveTo(i * 4, 2); ctx.lineTo(i * 2 - leg, 9);
+        ctx.stroke();
+      }
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.moveTo(-11, 2);
+      ctx.quadraticCurveTo(-13, -4, -6, -6);
+      ctx.quadraticCurveTo(0, -8.4, 6, -6);
+      ctx.quadraticCurveTo(13, -4, 11, 2);
+      ctx.quadraticCurveTo(6, 6, 0, 6);
+      ctx.quadraticCurveTo(-6, 6, -11, 2);
+      ctx.fill();
+      // spine ridges
+      ctx.fillStyle = def.dark;
+      for (let i = -3; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 3, -6.4 + Math.abs(i) * 0.4);
+        ctx.lineTo(i * 3 + 1.4, -8.4 - Math.sin(i) * 1.2);
+        ctx.lineTo(i * 3 + 2.8, -6.4 + Math.abs(i) * 0.4);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // jaw
+      ctx.fillStyle = def.dark;
+      ctx.beginPath();
+      ctx.moveTo(9, -1);
+      ctx.lineTo(14, 1.2);
+      ctx.lineTo(9, 3);
+      ctx.closePath();
+      ctx.fill();
+      // rows of pointed teeth
+      ctx.fillStyle = '#e8e0cc';
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(9 + i * 1.6, 0.2);
+        ctx.lineTo(9.8 + i * 1.6, 2);
+        ctx.lineTo(10.6 + i * 1.6, 0.2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // false stitched eyes
+      ctx.fillStyle = def.eye;
+      ctx.beginPath();
+      ctx.arc(-4.5, -5, 1.35, 0, TAU);
+      ctx.arc(4.5, -5, 1.35, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(40,16,12,0.9)';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(-4.5, -7); ctx.lineTo(-4.5, -3.4);
+      ctx.moveTo(4.5, -7); ctx.lineTo(4.5, -3.4);
+      ctx.stroke();
+    } else if (e.type === 'brute') {
+      // SCP-096 — the shy guy: pale, tall, mouth open wide, arms raw from stumbling
+      const cry = 0.55 + rage * 0.45 + Math.sin(game.time * 3 + e.seed) * 0.05;
+      ctx.globalAlpha = 0.92 + Math.sin(game.time * 6 + e.seed) * 0.06;
+      ctx.strokeStyle = '#b9b2a0';
+      ctx.lineWidth = 3.4;
+      ctx.lineCap = 'round';
+      const leg = Math.sin(game.time * 6 + e.seed) * 3;
+      ctx.beginPath();
+      ctx.moveTo(-4, 6); ctx.lineTo(-4 + leg, 13);
+      ctx.moveTo(4, 6); ctx.lineTo(4 - leg, 13);
+      ctx.stroke();
+      // torso
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.ellipse(0, -1 + rage * 2, 8, 10.5, 0, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(160,150,132,0.6)'; // ribs
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(0, -4 + i * 3.2, 5.5, 0.6, Math.PI - 0.6);
+        ctx.stroke();
+      }
+      // long arms — raised when enraged
+      ctx.strokeStyle = def.color;
+      ctx.lineWidth = 3.6;
+      const armLift = enraged(rage);
+      ctx.beginPath();
+      ctx.moveTo(-6, -5);
+      ctx.quadraticCurveTo(-13, -8 - armLift * 8, -11, -14 - armLift * 9);
+      ctx.moveTo(6, -5);
+      ctx.quadraticCurveTo(13, -8 - armLift * 8, 11, -14 - armLift * 9);
+      ctx.stroke();
+      ctx.fillStyle = def.color; // hands
+      ctx.beginPath();
+      ctx.arc(-11, -14.5 - armLift * 9, 2.6, 0, TAU);
+      ctx.arc(11, -14.5 - armLift * 9, 2.6, 0, TAU);
+      ctx.fill();
+      // head — hands-tied velcro face, enormous mouth
+      ctx.fillStyle = def.dark;
+      ctx.beginPath();
+      ctx.ellipse(0, -16, 5.6, 6.4, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.ellipse(0, -16.3, 5, 5.8, 0, 0, TAU);
+      ctx.fill();
+      // mouth craters open with fury
+      ctx.fillStyle = '#5d1316';
+      ctx.beginPath();
+      ctx.arc(0, -14.6, 1.6 + cry * 2.4, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#f0e8dc';
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 0.9 - 0.5, -12.9 + cry * 1.2);
+        ctx.lineTo(i * 0.25, -14 * cry - 1.4);
+        ctx.lineTo(i * 0.9 + 0.5, -12.9 + cry * 1.2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // weeping eyes
+      ctx.fillStyle = def.eye;
+      ctx.beginPath();
+      ctx.arc(-2.1, -18, 1.05 + rage * 0.4, 0, TAU);
+      ctx.arc(2.1, -18, 1.05 + rage * 0.4, 0, TAU);
+      ctx.fill();
+      // tears streaming past the jaw
+      ctx.strokeStyle = 'rgba(150,180,190,0.5)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(-2.1, -17.2); ctx.lineTo(-2.1, -13.2);
+      ctx.moveTo(2.1, -17.2); ctx.lineTo(2.1, -13.2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (e.type === 'wraith') {
+      // SCP-049 — plague doctor: black robe, white beaked mask, wide hat
+      ctx.globalAlpha = 0.9 + Math.sin(game.time * 3 + e.seed) * 0.05;
+      // robe body
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.moveTo(-9, 9);
+      ctx.quadraticCurveTo(-13, -6, 0, -19);
+      ctx.quadraticCurveTo(13, -6, 9, 9);
+      ctx.quadraticCurveTo(0, 15, -9, 9);
+      ctx.fill();
+      // hood + hat brim
+      ctx.fillStyle = def.dark;
+      ctx.beginPath();
+      ctx.ellipse(0, -12, 10.5, 3.4, 0, 0, TAU);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, -14.5, 5.5, 5, 0, 0, TAU);
+      ctx.fill();
+      // white mask with long beak
+      ctx.fillStyle = '#ded4be';
+      ctx.beginPath();
+      ctx.moveTo(-4.6, -16);
+      ctx.quadraticCurveTo(-3, -11.4, 0, -10.2);
+      ctx.quadraticCurveTo(3, -11.4, 4.6, -16);
+      ctx.quadraticCurveTo(0, -19.4, -4.6, -16);
+      ctx.fill();
+      // beak tip + bolt
+      ctx.fillStyle = '#c9bfa8';
+      ctx.beginPath();
+      ctx.arc(0, -10.6, 1.1, 0, TAU);
+      ctx.fill();
+      // glass eyes in the mask
+      ctx.fillStyle = def.eye;
+      ctx.shadowColor = def.eye;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(-2.5, -15.4, 1.3, 0, TAU);
+      ctx.arc(2.5, -15.4, 1.3, 0, TAU);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // plague satchel swing + heavy touch
+      ctx.fillStyle = '#3a2c1c';
+      ctx.beginPath();
+      ctx.arc(10 - (wob + 1) * 0.4, 1, 3.4, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (e.type === 'oldman') {
+      // SCP-106 — the old man: corroded silhouette, rot-drips, amber sockets
+      const drip = (game.time * 12 + e.seed * 20) % 16;
+      ctx.strokeStyle = '#100d0c';
+      ctx.lineWidth = 2.8;
+      ctx.lineCap = 'round';
+      const leg = Math.sin(game.time * 5 + e.seed) * 2.6;
+      ctx.beginPath();
+      ctx.moveTo(-3, 6); ctx.lineTo(-3 + leg, 12);
+      ctx.moveTo(3, 6); ctx.lineTo(3 - leg, 12);
       ctx.stroke();
       ctx.fillStyle = def.color;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 8.5 * s, 12 * s, 0, 0, TAU);
+      ctx.ellipse(0, -1, 7.6, 10.5, 0, 0, TAU);
       ctx.fill();
+      // hunched arms reaching
       ctx.strokeStyle = def.color;
-      ctx.lineWidth = 3 * s;
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(-4 * s, -2);
-      ctx.lineTo(-12 * s, 5 + wob * 2);
-      ctx.moveTo(4 * s, -2);
-      ctx.lineTo(12 * s, 5 - wob * 2);
+      ctx.moveTo(-4, -3); ctx.quadraticCurveTo(-10, -2, -12, 3 + wob);
+      ctx.moveTo(4, -3); ctx.quadraticCurveTo(10, -2, 12, 3 - wob);
       ctx.stroke();
-      ctx.fillStyle = '#1c1416';
+      // head with receding hair
+      ctx.fillStyle = def.dark;
       ctx.beginPath();
-      ctx.arc(0, -10 * s, 5.4 * s, 0, TAU);
+      ctx.arc(0, -9.4, 5, 0, TAU);
       ctx.fill();
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.ellipse(0, -8.8, 4.4, 4.6, 0, 0, TAU);
+      ctx.fill();
+      // amber rotting eyes
+      ctx.fillStyle = def.eye;
+      ctx.beginPath();
+      ctx.arc(-2, -10.2, 1, 0, TAU);
+      ctx.arc(2, -10.2, 1, 0, TAU);
+      ctx.fill();
+      // mouth of filth
+      ctx.strokeStyle = 'rgba(90,70,40,0.85)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, -6.4, 1.4, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+      // corrosion dripping off him
+      ctx.fillStyle = 'rgba(30,24,18,0.55)';
+      ctx.beginPath();
+      ctx.ellipse(-4, 4 + drip, 1.4, 2.6, 0, 0, TAU);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(6, 2 + drip * 0.7, 1.2, 2.2, 0, 0, TAU);
+      ctx.fill();
+    } else {
+      // SCP-682 — hard-to-destroy reptile: armored quadruped, blade spine, storm jaws
+      const s = e.r / 46;
+      const legPh = game.time * 5 + e.seed;
+      ctx.strokeStyle = def.dark;
+      ctx.lineWidth = 9 * s;
+      ctx.lineCap = 'round';
+      for (let i = -1; i <= 1; i += 2) {
+        ctx.beginPath();
+        ctx.moveTo(i * 18 * s, 12 * s); ctx.lineTo(i * 20 * s + Math.sin(legPh + i) * 4 * s, 22 * s);
+        ctx.moveTo(i * 26 * s, 10 * s); ctx.lineTo(i * 24 * s + Math.sin(legPh * 1.2 - i) * 4 * s, 24 * s);
+        ctx.stroke();
+        // claws
+        ctx.fillStyle = '#d8cbb0';
+        for (let c = -1; c <= 1; c++) {
+          ctx.beginPath();
+          ctx.moveTo(i * 20 * s + Math.sin(legPh + i) * 4 * s + c * 3 * s, 22 * s);
+          ctx.lineTo(i * 20 * s + Math.sin(legPh + i) * 4 * s + c * 3.6 * s, 25 * s);
+          ctx.lineTo(i * 20 * s + Math.sin(legPh + i) * 4 * s + (c + (i > 0 ? 1.4 : 0)) * 3.4 * s, 24.4 * s);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      // torso
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.ellipse(0, -2 * s, 30 * s, 16 * s, 0, 0, TAU);
+      ctx.fill();
+      // armored belly plates
+      ctx.fillStyle = def.dark;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse((i - 1) * 14 * s, 8 * s, 8 * s, 4 * s, 0, 0, TAU);
+        ctx.fill();
+      }
+      // blade spine
+      ctx.fillStyle = '#141a10';
+      for (let i = -3; i <= 3; i++) {
+        const sx = i * 8 * s;
+        ctx.beginPath();
+        ctx.moveTo(sx - 3 * s, -13 * s);
+        ctx.lineTo(sx, (-24 - Math.abs(3 - Math.abs(i)) * 3) * s);
+        ctx.lineTo(sx + 3 * s, -13 * s);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(200,220,180,0.35)';
+        ctx.lineWidth = 1 * s;
+        ctx.beginPath();
+        ctx.moveTo(sx, (-24 - Math.abs(3 - Math.abs(i)) * 3) * s);
+        ctx.lineTo(sx, -14 * s);
+        ctx.stroke();
+      }
+      // neck + head with storm jaws
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.moveTo(22 * s, -6 * s);
+      ctx.quadraticCurveTo(34 * s, -10 * s, 40 * s, -6 * s);
+      ctx.lineTo(40 * s, 4 * s);
+      ctx.quadraticCurveTo(30 * s, 8 * s, 22 * s, 6 * s);
+      ctx.closePath();
+      ctx.fill();
+      // jaws opening wider with each roar
+      const jaw = 2.4 + Math.abs(Math.sin(game.time * 2 + e.seed)) * 2.6;
+      ctx.fillStyle = '#1c2418';
+      ctx.beginPath();
+      ctx.moveTo(38 * s, -4 * s);
+      ctx.lineTo(50 * s, -jaw * s);
+      ctx.lineTo(38 * s, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(38 * s, 0);
+      ctx.lineTo(50 * s, jaw * s);
+      ctx.lineTo(38 * s, 4 * s);
+      ctx.closePath();
+      ctx.fill();
+      // teeth
+      ctx.fillStyle = '#efe6d2';
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo((40 + i * 3.4) * s, -1 * s);
+        ctx.lineTo((40.9 + i * 3.4) * s, (-jaw + 1.6) * s);
+        ctx.lineTo((42 + i * 3.4) * s, -1 * s);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // scars: they won't stay down
+      ctx.strokeStyle = 'rgba(214,90,70,0.55)';
+      ctx.lineWidth = 1.5 * s;
+      ctx.beginPath();
+      ctx.moveTo(-14 * s, -4 * s); ctx.lineTo(-4 * s, -10 * s);
+      ctx.moveTo(4 * s, 4 * s); ctx.lineTo(16 * s, -2 * s);
+      ctx.stroke();
+      // eyes
+      ctx.fillStyle = def.eye;
+      ctx.shadowColor = def.eye;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(36 * s, -7 * s, 1.8 * s, 0, TAU);
+      ctx.arc(44 * s, -7 * s, 1.8 * s, 0, TAU);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // tail
+      ctx.strokeStyle = def.color;
+      ctx.lineWidth = 6 * s;
+      ctx.beginPath();
+      ctx.moveTo(-28 * s, -2 * s);
+      ctx.quadraticCurveTo(-40 * s, 2 * s + Math.sin(game.time * 3) * 4 * s, -48 * s, 10 * s);
+      ctx.stroke();
+      // nameplate above the boss
+      ctx.font = '700 12px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,107,79,0.95)';
+      ctx.fillText('SCP-682', 0, -30 * s);
+      // boss health bar
+      const frac = clamp(e.hp / e.maxHp, 0, 1);
+      ctx.fillStyle = 'rgba(4,6,8,0.75)';
+      ctx.fillRect(-46 * s, -26 * s, 92 * s, 6);
+      ctx.fillStyle = '#d5533f';
+      ctx.fillRect(-45 * s, -25 * s, 90 * s * frac, 4);
+      ctx.strokeStyle = 'rgba(239,182,97,0.6)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-46 * s, -26 * s, 92 * s, 6);
     }
-    // eyes
-    const ex = 2.2 * s;
-    const ey = -10 * s;
-    ctx.fillStyle = def.eye;
-    ctx.shadowColor = def.eye;
-    ctx.shadowBlur = 7;
-    ctx.beginPath();
-    ctx.arc(-ex, ey, 1.5 * s, 0, TAU);
-    ctx.arc(ex, ey + 0.5, 1.5 * s, 0, TAU);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+
+    // status tints
+    if (e.slow > 0) {
+      ctx.strokeStyle = 'rgba(150,220,255,0.6)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(0, -4, e.r * 0.95, 0, TAU);
+      ctx.stroke();
+    }
+    if (e.burn > 0) {
+      for (let i = 0; i < 3; i++) {
+        const fy = -((game.time * 40 + i * 11 + e.seed * 10) % 26);
+        ctx.fillStyle = `rgba(255,${120 + i * 40},60,${0.5 - fy * 0.01})`;
+        ctx.beginPath();
+        ctx.arc(rand(-6, 6), fy, 2.4, 0, TAU);
+        ctx.fill();
+      }
+    }
     if (e.hitFlash > 0) {
       ctx.fillStyle = `rgba(255,230,210,${e.hitFlash * 3})`;
       ctx.beginPath();
-      ctx.ellipse(0, -2, 11 * s, 15 * s, 0, 0, TAU);
+      ctx.ellipse(0, -2, e.r * 0.95, e.r * 1.25, 0, 0, TAU);
       ctx.fill();
     }
-    if (e.hp < e.maxHp) {
+    if (!e.boss && e.hp < e.maxHp) {
       ctx.fillStyle = 'rgba(4,6,8,0.7)';
-      ctx.fillRect(-11, -22 * s, 22, 2.5);
+      ctx.fillRect(-11, -22 - (e.r > 14 ? 6 : 0), 22, 2.5);
       ctx.fillStyle = '#b5493d';
-      ctx.fillRect(-11, -22 * s, 22 * clamp(e.hp / e.maxHp, 0, 1), 2.5);
+      ctx.fillRect(-11, -22 - (e.r > 14 ? 6 : 0), 22 * clamp(e.hp / e.maxHp, 0, 1), 2.5);
+      // designation label for the bigger ones
+      if (e.r >= 13) {
+        ctx.font = '600 8px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(240,200,170,0.6)';
+        ctx.fillText(def.scp, 0, -26 - (e.r > 14 ? 6 : 0));
+      }
     }
     ctx.restore();
+  }
+
+  function enraged(rage) {
+    return clamp(rage, 0, 1);
   }
 
   function drawParticles() {
@@ -3235,7 +5028,9 @@
 
     if (game.mode !== 'menu') {
       const lantern = game.phase === 'night' ? 188 : game.phase === 'dusk' ? 150 : game.phase === 'dawn' ? 230 : 0;
-      if (lantern > 0) cut(player.x, player.y, lantern, 0.92);
+      if (player.inside && getActiveShelter() && getActiveShelter().state.integrity > 0) {
+        cut(player.x, player.y, Math.max(230, lantern + 20), 0.95); // hearthlight follows you inside
+      } else if (lantern > 0) cut(player.x, player.y, lantern, 0.92);
       else cut(player.x, player.y, 190, 0.35);
     }
 
@@ -3258,6 +5053,11 @@
 
     lightCtx.globalCompositeOperation = 'source-over';
     ctx.drawImage(lightCanvas, 0, 0, view.w, view.h);
+  }
+
+  function hexRgb(hex) {
+    const h = String(hex).replace('#', '');
+    return `${parseInt(h.slice(0, 2), 16) || 0},${parseInt(h.slice(2, 4), 16) || 0},${parseInt(h.slice(4, 6), 16) || 0}`;
   }
 
   function radialGlow(x, y, radius, rgb, alpha) {
@@ -3283,6 +5083,14 @@
     }
     if (game.mode !== 'menu') {
       radialGlow(player.x - Math.cos(player.aim) * 8, player.y - Math.sin(player.aim) * 8, 46, '255,190,110', 0.2);
+      if (player.shieldHp > 0) {
+        radialGlow(player.x, player.y, 40, '255,217,112', 0.4);
+      }
+    }
+    for (const t of game.turrets) {
+      const def = TURRETS[t.type];
+      const rgb = { tesla: '143,208,255', flame: '224,123,67', bfg: '155,232,107', mortar: '165,140,116' }[t.type] || '216,192,138';
+      radialGlow(t.x, t.y - 12, 26, rgb, 0.24);
     }
     for (const c of game.companions) {
       if (c.state === 'wild') radialGlow(c.x, c.y + 1, 34, '239,182,97', 0.26);
@@ -3303,12 +5111,12 @@
     }
     ctx.shadowBlur = 0;
 
-    // enemy eyes and wraith fire
+    // enemy eyes — colored by SCP designation
     for (const e of game.enemies) {
       if (e.dead) continue;
       const def = ENEMY_TYPES[e.type];
-      const sz = e.type === 'brute' ? 2.6 : e.type === 'crawler' ? 1.5 : 2;
-      radialGlow(e.x, e.y - 10, 9, '255,80,52', e.type === 'wraith' ? 0.25 : 0.5);
+      const sz = e.boss ? 4.4 : e.type === 'brute' ? 2.6 : e.type === 'crawler' ? 1.5 : 2;
+      radialGlow(e.x, e.y - 10, e.boss ? 30 : 9, hexRgb(def.eye), e.boss ? 0.6 : e.type === 'wraith' ? 0.25 : 0.5);
       ctx.fillStyle = def.eye;
       ctx.shadowColor = def.eye;
       ctx.shadowBlur = 9;
@@ -3486,6 +5294,7 @@
     beginWorld();
     drawGround(bounds);
     drawTrees(bounds);
+    drawTurrets(bounds);
     for (const s of shelters) {
       if (s.x < bounds.left - 200 || s.x > bounds.right + 200 || s.y < bounds.top - 200 || s.y > bounds.bottom + 200) continue;
       drawShelter(s);
@@ -3501,6 +5310,7 @@
     }
     if (game.mode !== 'menu') drawPlayer();
     drawParticles();
+    drawBeams();
     endWorld();
 
     drawLighting(bounds);
@@ -3567,9 +5377,20 @@
     updateBestBadges();
     updateTeamUI(true);
     bindInput();
+    bindKit();
+    bindPanelControls();
+    bindMobileToggle();
+    buildAbilityBar();
     resize();
     requestAnimationFrame(frame);
   }
 
   init();
+  if (/[?&]debug=1/.test(location.search)) {
+    window.nf = {
+      game, player, shelters, startGame, enterNight, resetRun, castAbility,
+      buildTurret, openKit, closeKit, damageEnemy, beginNextDay, addXp,
+      claimShelter, regionOf, getActiveShelter, spawnWildCompanions
+    };
+  }
 })();
