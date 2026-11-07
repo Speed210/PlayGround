@@ -760,6 +760,10 @@
     }
   }
 
+  function playerMaxHealth() {
+    return 100;
+  }
+
   function resetRun() {
     game.mode = 'playing';
     game.day = 1;
