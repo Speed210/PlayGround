@@ -1,4 +1,10 @@
-# PlayGround
+# CONTAINMENT: LAST MILE
+
+A mobile-friendly, side-scrolling containment escort game. Deploy field agents and recruited SCP allies, hold the highway, and keep the armored carrier intact through four operations.
+
+## Play
+
+Open `index.html` in a browser (or serve this folder with a local static web server). Select **Begin Operation**, review the briefing, then choose an operative card and tap/click the road to deploy them. Operatives automatically advance and fight. Earn supplies from defeated threats, pause with **Ⅱ**, and recruit a cooperative SCP after clearing each route. Progress and roster are saved in local storage.
 
 <!-- omgithub:readme:start -->
 ## 🚀 Build, play, and remix with OMGithub
