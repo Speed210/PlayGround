@@ -1,6 +1,12 @@
 (() => {
   const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+  const renderCanvas = document.createElement('canvas');
+  renderCanvas.width = 480;
+  renderCanvas.height = 270;
+  const ctx = renderCanvas.getContext('2d');
+  ctx.scale(.5, .5);
+  const output = canvas.getContext('2d');
+  output.imageSmoothingEnabled = false;
   const W = 960, H = 540, groundY = 409;
   const $ = id => document.getElementById(id);
   const screens = ['titleScreen','briefing','recruitScreen','gameOver','victory'];
@@ -60,35 +66,40 @@
   function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
   function line(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
   function circle(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
-  function drawBackground(){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#83908a');g.addColorStop(.46,'#b0a88c');g.addColorStop(.461,'#737866');g.addColorStop(1,'#353b38');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-    // Clouded dusk sky
-    ctx.fillStyle='#d3c4a0';ctx.globalAlpha=.16;for(let i=0;i<5;i++){circle(80+i*220,93+(i%2)*30,72,'#e9d8b8')}ctx.globalAlpha=1;
-    // Far tree line and ruined structures
-    for(let i=0;i<15;i++){let x=((i*103-(scenery*.19)%160)+W*2)%W;const h=45+(i*31%65);rect(x,235-h,7,h,'#4c5750');ctx.fillStyle='#556157';ctx.beginPath();ctx.moveTo(x-25,243-h);ctx.lineTo(x+4,178-h);ctx.lineTo(x+30,243-h);ctx.fill();ctx.beginPath();ctx.moveTo(x-18,225-h);ctx.lineTo(x+7,155-h);ctx.lineTo(x+30,225-h);ctx.fill()}
-    for(let i=0;i<4;i++){let x=((i*310-(scenery*.32)%340)+W)%W;rect(x,251,54,49,'#777765');rect(x+7,257,16,24,'#464d48');rect(x+32,261,12,10,'#4a5049');line(x-8,300,x+64,300,'#4b5048',3)}
-    // Road shoulder
-    rect(0,306,W,103,'#686d5b');rect(0,323,W,86,'#545a50');rect(0,336,W,73,'#363d3c');rect(0,344,W,4,'#aaa183');rect(0,398,W,5,'#c0b38b');
-    for(let x=-70;x<W+70;x+=112){let xx=x-(scenery%112);rect(xx,370,54,4,'#d1c5a1');rect(xx,410,50,5,'#393c35')}
-    // utility poles, drifting at distance
-    for(let i=0;i<4;i++){let x=((i*280-(scenery*.6)%280)+W)%W;rect(x,207,5,111,'#4d5148');line(x-31,219,x+34,219,'#4d5148',4);line(x-23,218,x-45,283,'#5d6252',1)}
-    // foreground grit
-    for(let i=0;i<42;i++){let x=(i*89-(scenery*1.1)%90+W)%W,y=416+(i*41%120);rect(x,y,2,1,'#8a8064')}
+  function drawBackground(){
+    // Flat dusk sky and layered scrubland keep the roadside readable at a glance.
+    rect(0,0,W,157,'#9b9b84');rect(0,157,W,86,'#b3a98d');rect(0,243,W,63,'#747865');
+    rect(0,0,W,70,'#929787');rect(0,70,W,7,'#a09e87');
+    // Blocky clouds and distant hills.
+    for(let i=0;i<6;i++){const x=((i*211-(scenery*.08)%250)+W)%W,y=49+(i%3)*26;rect(x,y,54,8,'#b6ad94');rect(x+12,y-7,35,7,'#b6ad94');rect(x+5,y+8,43,5,'#aba58d')}
+    for(let i=0;i<5;i++){const x=((i*245-(scenery*.12)%310)+W)%W;rect(x,192,145,48,'#858873');rect(x+17,179,93,13,'#858873');rect(x+38,169,61,10,'#858873')}
+    // Sparse roadside trees and low scrub, drawn in stepped silhouettes.
+    for(let i=0;i<18;i++){const x=((i*83-(scenery*.2)%166)+W*2)%W,h=40+(i*29%55),y=248-h;rect(x+15,y,8,h,'#555d50');rect(x,y+17,39,12,'#586151');rect(x+7,y,27,17,'#586151');rect(x+13,y-12,16,13,'#626956');rect(x-5,y+28,49,11,'#626956')}
+    // Abandoned roadside buildings and a faded checkpoint sign.
+    for(let i=0;i<4;i++){const x=((i*310-(scenery*.32)%340)+W)%W;rect(x,252,58,48,'#817f6d');rect(x+6,244,45,8,'#777967');rect(x+8,260,15,23,'#4c5349');rect(x+34,263,15,12,'#51574b');rect(x+25,281,8,19,'#696c5b');rect(x-7,299,72,4,'#626656')}
+    const signX=((705-(scenery*.32)%1020)+W)%W;rect(signX,225,5,57,'#565b4f');rect(signX-20,219,47,24,'#85826c');rect(signX-14,225,34,3,'#b7ad8a');rect(signX-14,232,25,3,'#b7ad8a');
+    // Shoulder, asphalt, painted lane marks and broken edge line.
+    rect(0,306,W,103,'#747562');rect(0,323,W,86,'#626657');rect(0,337,W,72,'#454a45');rect(0,343,W,4,'#a59b7d');rect(0,397,W,5,'#b5a886');
+    for(let x=-70;x<W+70;x+=112){const xx=x-(scenery%112);rect(xx,370,53,4,'#c5b894');rect(xx+3,411,45,4,'#41443c')}
+    // Utility poles recede into the haze.
+    for(let i=0;i<4;i++){const x=((i*280-(scenery*.6)%280)+W)%W;rect(x,207,5,111,'#55584d');rect(x-28,216,62,5,'#55584d');rect(x-22,211,4,9,'#55584d');rect(x+23,211,4,9,'#55584d');rect(x-20,218,2,65,'#666957')}
+    // Sparse pixel-sized gravel in the near verge.
+    for(let i=0;i<42;i++){const x=(i*89-(scenery*1.1)%90+W)%W,y=416+(i*41%120);rect(x,y,3,2,i%3?'#8a8064':'#77775f')}
   }
-  function drawVan(){// armored extraction carrier, always moving with the squad
+  function drawVan(){// block-built armored extraction carrier
     const x=58,y=317;ctx.save();
-    // shadow
-    ctx.fillStyle='#13181777';ctx.beginPath();ctx.ellipse(x+70,411,83,9,0,0,Math.PI*2);ctx.fill();
-    // body
-    ctx.fillStyle='#4c5c51';ctx.beginPath();ctx.moveTo(x,y+21);ctx.lineTo(x+28,y+1);ctx.lineTo(x+121,y+1);ctx.lineTo(x+145,y+26);ctx.lineTo(x+149,y+72);ctx.lineTo(x-5,y+72);ctx.lineTo(x-5,y+32);ctx.closePath();ctx.fill();
-    rect(x+10,y+13,20,48,'#38463f');rect(x+37,y+9,52,47,'#596b5d');rect(x+94,y+9,25,36,'#293632');rect(x+121,y+32,22,32,'#39483f');
-    // windshield and marking
-    ctx.fillStyle='#9da99a';ctx.globalAlpha=.72;ctx.beginPath();ctx.moveTo(x+30,y+7);ctx.lineTo(x+55,y+7);ctx.lineTo(x+55,y+30);ctx.lineTo(x+28,y+30);ctx.fill();ctx.globalAlpha=1;
-    rect(x+67,y+17,21,4,'#d9d4b8');circle(x+78,y+37,8,'#d8d2b7');circle(x+78,y+37,4,'#536450');rect(x-5,y+57,10,9,'#e6a56c');rect(x+132,y+57,14,7,'#e77d50');
-    // rugged bumper
-    rect(x-10,y+68,161,7,'#252c29');rect(x+2,y+71,27,6,'#161c1a');rect(x+112,y+71,27,6,'#161c1a');
-    circle(x+28,y+76,14,'#171c1b');circle(x+28,y+76,7,'#8a8b7b');circle(x+117,y+76,14,'#171c1b');circle(x+117,y+76,7,'#8a8b7b');
-    // roof light, hazard stripe
-    rect(x+34,y-5,47,5,'#303a35');rect(x+47,y-10,23,6,'#db7445');rect(x+10,y+52,18,4,'#c28b56');ctx.restore();
+    rect(x+8,405,138,8,'#343a34');
+    // Stepped roof and square armored shell.
+    rect(x-5,y+28,154,45,'#4d5b4e');rect(x+4,y+17,138,12,'#4d5b4e');rect(x+25,y+4,98,14,'#4d5b4e');
+    rect(x+10,y+29,20,32,'#38453e');rect(x+37,y+20,50,37,'#596757');rect(x+93,y+20,26,34,'#303b35');rect(x+122,y+34,20,27,'#39473d');
+    // Windshield, side window, containment mark and lamps.
+    rect(x+29,y+9,26,20,'#a4a890');rect(x+57,y+22,27,4,'#788270');rect(x+67,y+32,21,4,'#d5cfad');
+    rect(x+73,y+39,13,13,'#d3cba8');rect(x+77,y+43,5,5,'#52634f');rect(x-5,y+56,10,8,'#d6a06d');rect(x+133,y+55,12,8,'#c87958');
+    rect(x-10,y+68,161,8,'#272d29');rect(x+1,y+72,29,5,'#171c19');rect(x+112,y+72,29,5,'#171c19');
+    // Square wheel wells and chunky tires.
+    rect(x+14,y+64,29,22,'#202622');rect(x+104,y+64,29,22,'#202622');rect(x+20,y+68,16,14,'#777c6b');rect(x+110,y+68,16,14,'#777c6b');
+    rect(x+24,y+71,8,8,'#363d36');rect(x+114,y+71,8,8,'#363d36');
+    rect(x+34,y-2,47,6,'#303a35');rect(x+47,y-8,23,7,'#cf744c');rect(x+10,y+51,18,4,'#c28b56');ctx.restore();
   }
   function drawAgent(a){const u=units[a.type];const bob=Math.sin(a.walk)*2;const x=a.x,y=a.y+bob;ctx.save();ctx.translate(x,y);if(a.flash>0)ctx.globalAlpha=.6;
     // legs
@@ -110,7 +121,7 @@
   function drawEnemy(e){const x=e.x,y=e.y+Math.sin(e.walk)*2;ctx.save();ctx.translate(x,y);if(e.flash>0)ctx.globalAlpha=.55;if(e.type==='173'){rect(-16,-43,32,40,'#b98d7e');rect(-19,-38,5,20,'#967268');rect(14,-40,6,23,'#9e7a70');circle(-5,-48,10,'#b98d7e');circle(7,-47,9,'#b98d7e');circle(-5,-50,2,'#392c2d');circle(7,-49,2,'#392c2d');rect(-16,-5,12,6,'#4e4b45');rect(6,-5,13,6,'#4e4b45');line(-10,-39,10,-29,'#ddc1a1',2)}else if(e.type==='049'){rect(-11,-43,23,39,'#252d30');circle(0,-49,10,'#252d30');rect(-8,-53,15,7,'#111819');ctx.fillStyle='#555b58';ctx.beginPath();ctx.moveTo(-8,-42);line(-4,-39,-23,-10,'#252d30',5);line(8,-39,19,-10,'#252d30',5);rect(-13,-4,9,4,'#111819');rect(5,-4,10,4,'#111819');line(2,-48,5,-48,'#b67753',2)}else if(e.type==='096'){rect(-11,-40,22,37,'#b6ad98');circle(0,-47,9,'#c2b9a5');line(-3,-39,-14,-13,'#c2b9a5',4);line(5,-38,16,-14,'#c2b9a5',4);rect(-13,-5,10,5,'#666057');rect(5,-5,10,5,'#666057');line(-4,-48,4,-48,'#55483f',1)}else if(e.type==='106'){rect(-13,-42,26,38,'#41413d');circle(0,-48,10,'#4a4842');rect(-11,-53,20,5,'#363835');circle(-4,-48,2,'#c18a64');line(-9,-39,-17,-10,'#393a36',6);line(9,-39,20,-11,'#393a36',6);rect(-14,-5,11,5,'#252927');rect(7,-5,11,5,'#252927')}else{rect(-10,-39,21,35,e.type==='infected'?'#64764e':'#79624b');circle(0,-47,9,e.type==='infected'?'#9a967c':'#b29a7a');rect(-8,-54,17,6,'#414943');rect(-6,-48,13,3,'#433c35');line(-7,-34,-13,-10,e.type==='infected'?'#66764d':'#79624b',5);line(8,-34,16,-14,e.type==='infected'?'#66764d':'#79624b',5);rect(-12,-5,10,5,'#282e2a');rect(7,-5,10,5,'#282e2a');if(e.type==='infected'){circle(-3,-47,1.5,'#c3c072');circle(4,-47,1.5,'#c3c072')}else{line(5,-30,18,-34,'#343a36',3)}}ctx.restore();if(e.hp<e.maxHp){rect(x-17,y-65,34,4,'#272c28');rect(x-17,y-65,34*Math.max(0,e.hp/e.maxHp),4,'#d36d50')} }
   function draw(){ctx.save();if(shake>0)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);drawBackground();drawVan();friendlies.forEach(a=>a.type.startsWith('scp')?drawSCP(a):drawAgent(a));hostiles.forEach(drawEnemy);bullets.forEach(b=>{circle(b.x,b.y,3,b.color);circle(b.x,b.y,1,'#fff4bd')});particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/.6);circle(p.x,p.y,p.r,p.color)});ctx.globalAlpha=1;
     // Overlay route atmosphere
-    const fog=ctx.createLinearGradient(0,0,0,H);fog.addColorStop(.45,'#e5d7b600');fog.addColorStop(1,'#1118161f');ctx.fillStyle=fog;ctx.fillRect(0,0,W,H);ctx.restore();}
+    ctx.restore();output.clearRect(0,0,W,H);output.drawImage(renderCanvas,0,0,W,H);}
   function frame(t){const dt=Math.min(.045,(t-lastTimestamp)/1000||0);lastTimestamp=t;if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)$('toast').classList.add('hidden')}tick(dt);draw();requestAnimationFrame(frame)}
   // Initial state and UI
   showBriefOnFirstRun();renderCards();requestAnimationFrame(frame);
