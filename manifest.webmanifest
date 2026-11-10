@@ -1,0 +1,11 @@
+{
+  "name": "Ring Rivals: Pocket Boxing",
+  "short_name": "Ring Rivals",
+  "description": "A pocket-sized retro arcade boxing game.",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101525",
+  "theme_color": "#101525",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

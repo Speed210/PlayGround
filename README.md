@@ -16,3 +16,14 @@
 - 👤 [Explore the creator's projects](https://go.ondev.store/Speed210).
 - 🌍 [Create with OMGithub](https://go.ondev.store/).
 <!-- omgithub:readme:end -->
+
+## Ring Rivals: Pocket Boxing
+
+A mobile-first, original retro boxing game that runs in the browser. Serve this folder with any static web server and open `index.html` on Android Chrome; add it to your home screen for an app-like experience.
+
+### Controls
+
+- **Left / Right:** slip an incoming punch. Watch for the red **INCOMING!** tell.
+- **Jab / Hook:** counter while the opponent is recovering.
+- **Star:** spend a star on a heavy punch. Perfect slips build stars.
+- **Keyboard:** ← / → to dodge, J to jab, K to hook, U for Star, Enter to start or rematch.

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#101525" />
+  <meta name="description" content="A pocket-sized retro arcade boxing game. Dodge, counter, and become the champion." />
+  <title>Ring Rivals — Pocket Boxing</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="game-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">RR</div>
+      <div class="brand-copy"><span class="eyebrow">8-BIT ARCADE BOXING</span><h1>RING <b>RIVALS</b></h1></div>
+      <button class="sound-button" id="soundButton" aria-label="Toggle sound" title="Toggle sound">♫ <span>SOUND</span></button>
+    </header>
+
+    <section class="fight-card" aria-label="Boxing match">
+      <div class="match-strip">
+        <div class="fighter-label player-label"><span class="corner-dot blue"></span> YOU <small>BLUE CORNER</small></div>
+        <div class="round-pill" id="roundLabel">ROUND 1</div>
+        <div class="fighter-label rival-label"><small>RED CORNER</small> REX <span class="corner-dot red"></span></div>
+      </div>
+      <div class="bars-row">
+        <div class="meter-group"><div class="meter-title"><span>VITALITY</span><span id="playerHealthText">100</span></div><div class="meter"><div class="meter-fill player-fill" id="playerHealth"></div></div></div>
+        <div class="clock" id="clock">1:30</div>
+        <div class="meter-group right-meter"><div class="meter-title"><span id="enemyHealthText">100</span><span>VITALITY</span></div><div class="meter enemy-meter"><div class="meter-fill enemy-fill" id="enemyHealth"></div></div></div>
+      </div>
+      <div class="arena-wrap">
+        <canvas id="arena" width="720" height="430" aria-label="Retro boxing ring"></canvas>
+        <div class="canvas-hud" id="canvasHud"><span class="round-tag">★ MAIN EVENT ★</span><span class="stance-tag" id="stanceTag">GET READY</span></div>
+        <div class="overlay" id="overlay">
+          <div class="overlay-card" id="overlayCard">
+            <div class="overlay-kicker">POCKET ARCADE • 1 PLAYER</div>
+            <h2 id="overlayTitle">STEP INTO<br/><em>THE RING</em></h2>
+            <p id="overlayText">Read the tells. Slip the punch. Make your move.</p>
+            <button class="primary-button" id="startButton">FIGHT! <span>▶</span></button>
+            <div class="mini-hint">BEST ON A PHONE · PLAY WITH YOUR THUMBS</div>
+          </div>
+        </div>
+        <div class="flash" id="flash"></div>
+      </div>
+      <div class="status-line"><span class="status-dot"></span><span id="statusText">READY WHEN YOU ARE, CHAMP.</span><span class="combo" id="comboText"></span></div>
+    </section>
+
+    <section class="controls" aria-label="Fight controls">
+      <div class="control-row defense-row">
+        <div class="control-caption"><span>01</span> SLIP / DODGE</div>
+        <div class="button-pair">
+          <button class="game-button dodge" data-action="left" aria-label="Dodge left"><span class="arrow">↶</span><small>LEFT</small></button>
+          <button class="game-button dodge" data-action="right" aria-label="Dodge right"><span class="arrow">↷</span><small>RIGHT</small></button>
+        </div>
+      </div>
+      <div class="control-row attack-row">
+        <div class="control-caption"><span>02</span> COUNTER PUNCH</div>
+        <div class="button-pair">
+          <button class="game-button punch" data-action="jab" aria-label="Jab"><span class="glove">✊</span><small>JAB</small></button>
+          <button class="game-button punch" data-action="hook" aria-label="Hook"><span class="glove">✊</span><small>HOOK</small></button>
+          <button class="game-button star" data-action="special" aria-label="Star punch"><span class="star-icon">★</span><small>STAR <i id="starCount">0</i></small></button>
+        </div>
+      </div>
+    </section>
+    <footer class="footnote"><span>◀ ▶ MOVE</span><span>TIME YOUR COUNTERS</span><span>★ BUILD YOUR SUPER</span></footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
