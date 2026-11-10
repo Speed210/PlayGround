@@ -83,51 +83,109 @@
     ctx.strokeStyle='#ffffff55';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(isPlayer?52:-78,-124);ctx.lineTo(isPlayer?70:-59,-124);ctx.stroke();
     // cheek stars when stunned
     if(hit>0){ctx.fillStyle='#ffdc68';for(let i=0;i<3;i++){const a=elapsed*8+i*2.1;rect(Math.cos(a)*31-2,-165+Math.sin(a)*8,4,4,'#ffdc68')}}ctx.restore();}
+  const clamp=(n,min=0,max=1)=>Math.max(min,Math.min(max,n));
+  const smooth=n=>{n=clamp(n);return n*n*(3-2*n)};
   function drawRival(){
-    const bob=enemy.mode==='idle'?Math.sin(elapsed*5)*2:0;
-    const recoil=enemy.hit>0?8:0;
-    ctx.save();ctx.translate(360+recoil,405+bob);ctx.scale(1.42,1.42);
-    // Squared-off, original arcade sprite: broad shoulders, bright trunks, oversized gloves.
-    rect(-13,-152,26,18,'#d58c66');rect(-24,-178,48,36,'#d58c66');
-    rect(-27,-183,54,13,'#f2c34e');rect(-23,-194,45,13,'#f2c34e');rect(-14,-204,29,12,'#f2c34e');rect(-8,-209,18,8,'#ffe17b');
-    rect(-24,-168,11,4,'#35253a');rect(13,-168,11,4,'#35253a');rect(-4,-158,9,5,'#713c37');rect(-12,-150,25,4,'#fff0d4');
-    // singlet and torso
-    rect(-32,-144,64,52,'#327c73');rect(-42,-139,16,34,'#327c73');rect(26,-139,16,34,'#327c73');rect(-34,-96,68,31,'#df4f59');rect(-34,-96,68,6,'#ffd267');rect(-7,-88,14,13,'#ffe078');
-    // legs and boots
-    rect(-28,-65,22,45,'#d58c66');rect(7,-65,22,45,'#d58c66');rect(-36,-27,34,11,'#443451');rect(4,-27,36,11,'#443451');
-    // gloves move according to the called attack
-    const swinging=enemy.mode==='strike'||enemy.mode==='feint';
-    if(swinging&&enemy.attack==='left hook'){rect(-66,-137,34,27,'#f05c64');rect(-70,-134,12,16,'#ffb08a');rect(24,-128,29,24,'#f05c64');}
-    else if(swinging&&enemy.attack==='right hook'){rect(32,-137,34,27,'#f05c64');rect(58,-134,12,16,'#ffb08a');rect(-53,-128,29,24,'#f05c64');}
-    else if(swinging&&enemy.attack==='body shot'){rect(-45,-105,34,27,'#f05c64');rect(16,-128,31,24,'#f05c64');}
-    else{rect(-54,-133,31,27,'#f05c64');rect(23,-133,31,27,'#f05c64');}
-    rect(-50,-129,19,4,'#ffb6a1');rect(27,-129,19,4,'#ffb6a1');
-    if(enemy.guard>0){rect(-41,-186,82,5,'#fff1a0');}
-    if(enemy.flash>0){ctx.globalAlpha=.72;rect(-72,-210,144,195,'#fff4d6');ctx.globalAlpha=1;}
+    const idle=Math.sin(elapsed*4.2), breathing=Math.sin(elapsed*2.7);
+    const recoil=enemy.hit>0?smooth(enemy.hit/.22):0;
+    const striking=enemy.mode==='strike'||enemy.mode==='feint';
+    const strikeT=enemy.mode==='strike'?smooth(1-enemy.timer/.36):enemy.mode==='feint'?smooth(1-enemy.timer/.13):0;
+    const windup=enemy.mode==='windup'?smooth(1-enemy.timer/.9):0;
+    const hook=enemy.attack==='left hook'?-1:1;
+    const swing=striking?Math.sin(strikeT*Math.PI):0;
+    const lean=(enemy.mode==='windup'?windup*.09:0)+(striking?swing*.11:0)-recoil*.08;
+    const shift=striking?swing*hook*18:enemy.mode==='windup'?-hook*windup*5:idle*2;
+    ctx.save();ctx.translate(360+shift+(recoil*9),405+Math.sin(elapsed*4.2)*2);ctx.scale(1.38,1.38);ctx.rotate(lean);
+    // Original arcade challenger: a sharply outlined, athletic boxer with a curled pompadour,
+    // emerald singlet, scarlet trunks, taped wrists, and oversized red gloves.
+    ctx.fillStyle='#11182766';ctx.beginPath();ctx.ellipse(0,4,43,9,0,0,Math.PI*2);ctx.fill();
+    const skin='#bd7956',skinLit='#e3a276',skinShade='#874a3f',ink='#30243a',teal='#237c72',tealLit='#55aa91',red='#d94752',redLit='#ff7770',gold='#ffd46a';
+    // Legs, boots, and ankle wraps; knees shift subtly through the idle stance.
+    poly([[-24,-66],[-4,-66],[-8,-29],[-16,-19],[-31,-24],[-30,-39]],skin);
+    poly([[4,-66],[26,-68],[31,-36],[25,-22],[10,-20],[7,-36]],skin);
+    poly([[-20,-51],[-7,-49],[-12,-34],[-26,-34]],skinLit);poly([[13,-51],[26,-49],[28,-35],[13,-34]],skinShade);
+    rect(-34,-27,34,12,ink);rect(6,-27,37,12,ink);rect(-32,-29,30,4,'#eee5d2');rect(9,-29,31,4,'#eee5d2');
+    rect(-33,-17,36,5,'#51415c');rect(7,-17,39,5,'#51415c');
+    // Back arm in guard, articulated at the shoulder and elbow.
+    ctx.save();ctx.translate(-27,-137);ctx.rotate(-.08-idle*.035+windup*.12);
+    poly([[-2,-3],[-15,-7],[-25,8],[-22,25],[-8,28],[3,15]],skin);
+    poly([[-16,4],[-23,13],[-20,23],[-12,20],[-8,10]],skinLit);
+    roundRect(-37,5,31,29,9,red);rect(-37,10,8,13,'#f2b58e');rect(-33,4,25,5,redLit);rect(-33,30,24,4,'#a72f43');
+    ctx.restore();
+    // Torso has a tapered silhouette with readable singlet panels and muscle highlights.
+    const torsoBounce=breathing*1.3;
+    poly([[-29,-147],[-17,-157],[0,-151],[17,-157],[30,-146],[27,-112],[20,-91],[27,-72],[20,-63],[-22,-63],[-29,-75],[-21,-95],[-28,-116]],skin);
+    poly([[-28,-145],[-17,-155],[-4,-150],[-7,-111],[-18,-99],[-25,-114]],skinLit);
+    poly([[2,-149],[18,-154],[29,-144],[25,-116],[15,-103],[8,-111]],skinShade);
+    // singlet straps and chest opening
+    poly([[-30,-147],[-24,-160],[-12,-157],[-8,-130],[-15,-113],[-27,-119]],teal);
+    poly([[30,-147],[24,-160],[12,-157],[8,-130],[15,-113],[27,-119]],teal);
+    poly([[-25,-145],[-13,-154],[0,-149],[13,-154],[25,-145],[22,-111],[0,-105],[-22,-111]],teal);
+    poly([[-20,-139],[-9,-145],[-2,-139],[-5,-127],[-19,-126]],tealLit);
+    poly([[20,-139],[9,-145],[2,-139],[5,-127],[19,-126]],'#185b5d');
+    ctx.strokeStyle='#164e50';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-2,-134);ctx.lineTo(-1,-114);ctx.moveTo(-18,-119);ctx.lineTo(-4,-115);ctx.moveTo(18,-119);ctx.lineTo(4,-115);ctx.stroke();
+    // Defined abs and contrasting trim give the tiny sprite extra character.
+    poly([[-13,-106],[0,-110],[13,-106],[11,-92],[6,-85],[-6,-85],[-11,-92]],skin);
+    ctx.strokeStyle=skinShade;ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(0,-106);ctx.lineTo(0,-87);ctx.moveTo(-10,-99);ctx.lineTo(-2,-97);ctx.moveTo(10,-99);ctx.lineTo(2,-97);ctx.stroke();
+    // Bright trunks, waistband, side stripes, and a tiny gold crest.
+    poly([[-25,-88],[0,-84],[25,-88],[28,-65],[8,-61],[1,-72],[-6,-61],[-28,-65]],red);
+    rect(-26,-89,52,7,gold);rect(-24,-80,5,13,'#ff8173');rect(20,-80,5,13,'#a72f43');
+    poly([[-5,-83],[0,-86],[5,-83],[4,-77],[-4,-77]],gold);
+    // Neck, ears and broad jaw.
+    rect(-10,-173,20,23,skin);rect(-8,-171,8,18,skinLit);rect(-26,-190,7,13,skin);rect(19,-190,7,13,skinShade);
+    poly([[-24,-205],[-15,-215],[4,-216],[20,-207],[24,-191],[20,-178],[12,-169],[0,-165],[-13,-169],[-22,-180],[-26,-193]],skin);
+    poly([[-23,-196],[-18,-207],[-7,-210],[-9,-188],[-16,-178],[-22,-184]],skinLit);
+    // Signature swept dark hair, sideburns, brows and readable facial expression.
+    poly([[-27,-194],[-30,-207],[-20,-213],[-23,-222],[-8,-218],[-3,-227],[3,-218],[17,-222],[25,-213],[23,-203],[15,-208],[9,-204],[-1,-210],[-11,-205]],'#33263c');
+    poly([[-25,-193],[-22,-205],[-15,-208],[-15,-196],[-19,-188]],'#493044');rect(-23,-190,5,13,'#33263c');rect(19,-191,5,12,'#33263c');
+    rect(-17,-191,7,3,ink);rect(8,-191,7,3,ink);rect(-15,-192,3,2,'#fff0cb');rect(10,-192,3,2,'#fff0cb');
+    poly([[-19,-197],[-10,-200],[-5,-197],[-15,-195]],ink);poly([[7,-197],[13,-200],[20,-197],[13,-195]],ink);
+    poly([[-3,-190],[1,-186],[0,-181],[-4,-181]],skinShade);rect(-8,-175,17,3,'#713d3a');rect(-6,-173,13,2,'#f5c2a0');
+    // Lead arm sweeps in a smooth arc; during windup it coils back before the strike.
+    const leadSide=enemy.attack==='left hook'?-1:1;
+    const extend=swing*40, coil=windup*12;
+    ctx.save();ctx.translate(leadSide*27,-137);ctx.rotate((leadSide<0?-1:1)*(-.05+windup*.4+swing*.12));
+    poly([[-1,-2],[13,-8],[25,4],[22,19],[9,27],[-3,14]],skin);
+    poly([[9,0],[20,5],[19,15],[9,21],[4,12]],skinLit);
+    ctx.translate(leadSide*(extend-coil),swing*(enemy.attack==='body shot'?15:-17));
+    ctx.rotate(leadSide*swing*.14);
+    roundRect(-4,-9,34,31,10,red);rect(0,-7,26,5,redLit);rect(2,17,25,5,'#a72f43');rect(23,-3,6,12,'#ffab85');
+    ctx.strokeStyle='#ffe0b0';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(2,-2);ctx.lineTo(25,-2);ctx.stroke();
+    ctx.restore();
+    // Tiny highlights and hit flash preserve the intentionally chunky, hand-drawn arcade look.
+    rect(-25,-145,8,3,tealLit);rect(17,-145,8,3,'#185b5d');
+    if(enemy.guard>0){ctx.strokeStyle='#fff1a0';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-155,48,Math.PI*1.12,Math.PI*1.88);ctx.stroke()}
+    if(enemy.flash>0){ctx.globalAlpha=.42;rect(-62,-226,124,213,'#fff4d6');ctx.globalAlpha=1;}
     ctx.restore();
   }
   function drawPOV(){
-    const slip=player.dodge>0?player.dodgeDir*25:0;
+    const dodgeProgress=player.dodge>0?1-player.dodge/.58:1;
+    const slip=player.dodge>0?player.dodgeDir*Math.sin(dodgeProgress*Math.PI)*29:0;
+    const punchProgress=player.punch>0?1-player.punch/.31:0;
+    const punchReach=Math.sin(clamp(punchProgress)*Math.PI)*43;
     const jab=player.punch>0;
     ctx.save();ctx.translate(slip,player.hit>0?8:0);
     // Forearms and gloves frame the ring from the boxer's point of view.
     poly([[115,430],[158,430],[215,347],[188,328],[143,366]],'#b36d52');
     poly([[605,430],[563,430],[505,347],[532,328],[577,366]],'#b36d52');
     if(jab){
-      const x=player.punchType==='hook'?450:365;
+      const hook=player.punchType==='hook';
+      const x=(hook?450:365)+(hook?1:-.25)*punchReach;
+      const y=260-Math.sin(punchProgress*Math.PI)*18;
       poly([[505,372],[536,354],[x+15,294],[x-20,282],[x-2,345]],'#b36d52');
-      roundRect(x-30,260,65,56,17,player.punchType==='special'?'#ffca4b':'#2877c7');
-      rect(x-20,270,42,7,'#77c8ff');
+      roundRect(x-30,y,65,56,17,player.punchType==='special'?'#ffca4b':'#2877c7');
+      rect(x-20,y+10,42,7,'#77c8ff');
     }else{
-      roundRect(120,331,92,77,22,'#2877c7');roundRect(508,331,92,77,22,'#2877c7');
-      rect(137,343,52,8,'#77c8ff');rect(525,343,52,8,'#77c8ff');
+      const guardBob=Math.sin(elapsed*5)*2;
+      roundRect(120,331+guardBob,92,77,22,'#2877c7');roundRect(508,331-guardBob,92,77,22,'#2877c7');
+      rect(137,343+guardBob,52,8,'#77c8ff');rect(525,343-guardBob,52,8,'#77c8ff');
     }
     ctx.restore();
   }
   function draw(){ctx.save();if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);shake*=.85;if(shake<.3)shake=0}drawBackground(elapsed);
     drawRival();drawPOV();
     if(state==='fight'&&(enemy.mode==='windup'||enemy.mode==='feint')){const pulse=.5+.4*Math.sin(elapsed*18);roundRect(268,50,184,30,3,`rgba(255,77,91,${.16+pulse*.25})`);ctx.fillStyle='#fff0c4';ctx.font='bold 13px "DM Mono",monospace';ctx.textAlign='center';ctx.fillText(enemy.attack==='feint'?'DON’T FALL FOR IT':`SLIP ${enemy.dodgeAnswer<0?'LEFT':'RIGHT'}!`,360,70);}
-    if(player.punch>0){ctx.strokeStyle=player.punchType==='special'?'#ffdf67':'#e9f8ff';ctx.globalAlpha=Math.min(1,player.punch*4);ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(360,330);ctx.lineTo(player.punchType==='hook'?445:375,283);ctx.stroke();ctx.globalAlpha=1}
+    if(player.punch>0){const progress=1-player.punch/.31;const reach=Math.sin(clamp(progress)*Math.PI);ctx.strokeStyle=player.punchType==='special'?'#ffdf67':'#e9f8ff';ctx.globalAlpha=reach*.72;ctx.lineWidth=3+reach*3;ctx.beginPath();ctx.moveTo(360,330);ctx.lineTo((player.punchType==='hook'?445:375)+(player.punchType==='hook'?1:-.25)*reach*43,283-reach*18);ctx.stroke();ctx.globalAlpha=1}
     for(const p of particles){ctx.globalAlpha=Math.max(0,p.life*2);rect(p.x,p.y,p.size,p.size,p.color)}ctx.globalAlpha=1;
     for(const f of floating){ctx.globalAlpha=Math.min(1,f.life*2);ctx.fillStyle=f.color;ctx.font='900 20px "Barlow Condensed",sans-serif';ctx.textAlign='center';ctx.shadowColor='#172034';ctx.shadowBlur=4;ctx.fillText(f.text,f.x,f.y);ctx.shadowBlur=0}ctx.globalAlpha=1;
     if(state==='ready'){ctx.fillStyle='#ffffff99';ctx.font='11px "DM Mono",monospace';ctx.textAlign='center';ctx.fillText('SLIP THE CALLED DIRECTION • COUNTER WHEN HE’S OPEN',360,409)}
