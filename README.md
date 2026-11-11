@@ -19,7 +19,7 @@
 
 ## Ring Rivals: Pocket Boxing
 
-A mobile-first, original retro boxing game that runs in the browser. Serve this folder with any static web server and open `index.html` on Android Chrome; add it to your home screen for an app-like experience.
+A mobile-first, original retro boxing game that runs in the browser. The player and Glass Joe-inspired rival use hand-drawn vector art based on the provided [Punch-Out!! arcade image reference](https://share.google/images/PS2VOOrikatiNdD7B): the green-haired challenger, Joe's auburn hair and bruised face, and his cream-and-red boxing kit. The reference image is not bundled; the in-game character illustrations are original drawings. Serve this folder with any static web server and open `index.html` on Android Chrome; add it to your home screen for an app-like experience.
 
 ### Controls
 

@@ -95,11 +95,11 @@
     const swing=striking?Math.sin(strikeT*Math.PI):0;
     const lean=(enemy.mode==='windup'?windup*.09:0)+(striking?swing*.11:0)-recoil*.08;
     const shift=striking?swing*hook*18:enemy.mode==='windup'?-hook*windup*5:idle*2;
-    ctx.save();ctx.translate(360+shift+(recoil*9),405+Math.sin(elapsed*4.2)*2);ctx.scale(1.38,1.38);ctx.rotate(lean);
-    // Original arcade challenger: a sharply outlined, athletic boxer with a curled pompadour,
-    // emerald singlet, scarlet trunks, taped wrists, and oversized red gloves.
+    ctx.save();ctx.translate(360+shift+(recoil*9),405+Math.sin(elapsed*4.2)*2);ctx.scale(1.24,1.32);ctx.rotate(lean);
+    // Glass Joe-inspired arcade challenger: a wiry French southpaw with a nervous
+    // expression, swept auburn hair, cream singlet, tricolor trim, and red gloves.
     ctx.fillStyle='#11182766';ctx.beginPath();ctx.ellipse(0,4,43,9,0,0,Math.PI*2);ctx.fill();
-    const skin='#bd7956',skinLit='#e3a276',skinShade='#874a3f',ink='#30243a',teal='#237c72',tealLit='#55aa91',red='#d94752',redLit='#ff7770',gold='#ffd46a';
+    const skin='#e1a780',skinLit='#ffd0aa',skinShade='#985a50',ink='#332b3a',teal='#eee9dd',tealLit='#497ec0',red='#c73e4a',redLit='#f16b70',gold='#f3cf70';
     // Legs, boots, and ankle wraps; knees shift subtly through the idle stance.
     poly([[-24,-66],[-4,-66],[-8,-29],[-16,-19],[-31,-24],[-30,-39]],skin);
     poly([[4,-66],[26,-68],[31,-36],[25,-22],[10,-20],[7,-36]],skin);
@@ -118,11 +118,11 @@
     poly([[-28,-145],[-17,-155],[-4,-150],[-7,-111],[-18,-99],[-25,-114]],skinLit);
     poly([[2,-149],[18,-154],[29,-144],[25,-116],[15,-103],[8,-111]],skinShade);
     // singlet straps and chest opening
-    poly([[-30,-147],[-24,-160],[-12,-157],[-8,-130],[-15,-113],[-27,-119]],teal);
-    poly([[30,-147],[24,-160],[12,-157],[8,-130],[15,-113],[27,-119]],teal);
+    poly([[-30,-147],[-24,-160],[-12,-157],[-8,-130],[-15,-113],[-27,-119]],tealLit);
+    poly([[30,-147],[24,-160],[12,-157],[8,-130],[15,-113],[27,-119]],tealLit);
     poly([[-25,-145],[-13,-154],[0,-149],[13,-154],[25,-145],[22,-111],[0,-105],[-22,-111]],teal);
     poly([[-20,-139],[-9,-145],[-2,-139],[-5,-127],[-19,-126]],tealLit);
-    poly([[20,-139],[9,-145],[2,-139],[5,-127],[19,-126]],'#185b5d');
+    poly([[20,-139],[9,-145],[2,-139],[5,-127],[19,-126]],'#315b91');
     ctx.strokeStyle='#164e50';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-2,-134);ctx.lineTo(-1,-114);ctx.moveTo(-18,-119);ctx.lineTo(-4,-115);ctx.moveTo(18,-119);ctx.lineTo(4,-115);ctx.stroke();
     // Defined abs and contrasting trim give the tiny sprite extra character.
     poly([[-13,-106],[0,-110],[13,-106],[11,-92],[6,-85],[-6,-85],[-11,-92]],skin);
@@ -136,11 +136,13 @@
     poly([[-24,-205],[-15,-215],[4,-216],[20,-207],[24,-191],[20,-178],[12,-169],[0,-165],[-13,-169],[-22,-180],[-26,-193]],skin);
     poly([[-23,-196],[-18,-207],[-7,-210],[-9,-188],[-16,-178],[-22,-184]],skinLit);
     // Signature swept dark hair, sideburns, brows and readable facial expression.
-    poly([[-27,-194],[-30,-207],[-20,-213],[-23,-222],[-8,-218],[-3,-227],[3,-218],[17,-222],[25,-213],[23,-203],[15,-208],[9,-204],[-1,-210],[-11,-205]],'#33263c');
-    poly([[-25,-193],[-22,-205],[-15,-208],[-15,-196],[-19,-188]],'#493044');rect(-23,-190,5,13,'#33263c');rect(19,-191,5,12,'#33263c');
+    poly([[-27,-194],[-30,-207],[-20,-213],[-23,-222],[-8,-218],[-3,-227],[3,-218],[17,-222],[25,-213],[23,-203],[15,-208],[9,-204],[-1,-210],[-11,-205]],'#572b40');
+    poly([[-25,-193],[-22,-205],[-15,-208],[-15,-196],[-19,-188]],'#754054');rect(-23,-190,5,13,'#572b40');rect(19,-191,5,12,'#572b40');
     rect(-17,-191,7,3,ink);rect(8,-191,7,3,ink);rect(-15,-192,3,2,'#fff0cb');rect(10,-192,3,2,'#fff0cb');
     poly([[-19,-197],[-10,-200],[-5,-197],[-15,-195]],ink);poly([[7,-197],[13,-200],[20,-197],[13,-195]],ink);
     poly([[-3,-190],[1,-186],[0,-181],[-4,-181]],skinShade);rect(-8,-175,17,3,'#713d3a');rect(-6,-173,13,2,'#f5c2a0');
+    // A couple of faded cheek marks make the old arcade veteran unmistakable.
+    ctx.strokeStyle='#a94f5a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-18,-183);ctx.lineTo(-11,-181);ctx.moveTo(12,-184);ctx.lineTo(18,-182);ctx.stroke();
     // Lead arm sweeps in a smooth arc; during windup it coils back before the strike.
     const leadSide=enemy.attack==='left hook'?-1:1;
     const extend=swing*40, coil=windup*12;
