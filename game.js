@@ -2,12 +2,75 @@
   'use strict';
   const canvas = document.getElementById('arena');
   const ctx = canvas.getContext('2d');
+  const fighterCanvas=document.getElementById('fighter3d');
+  const renderer=createFighterRenderer(fighterCanvas);
   const $ = (id) => document.getElementById(id);
   const ui = { overlay:$('overlay'), overlayTitle:$('overlayTitle'), overlayText:$('overlayText'), start:$('startButton'), status:$('statusText'), stance:$('stanceTag'), clock:$('clock'), playerHealth:$('playerHealth'), enemyHealth:$('enemyHealth'), playerHealthText:$('playerHealthText'), enemyHealthText:$('enemyHealthText'), round:$('roundLabel'), stars:$('starCount'), combo:$('comboText'), flash:$('flash'), sound:$('soundButton') };
   const W=720,H=430;
+  function createFighterRenderer(target){
+    const gl=target.getContext('webgl',{alpha:true,antialias:true,depth:true,premultipliedAlpha:false})||target.getContext('experimental-webgl');
+    if(!gl)return{available:false,setContender(){},render(){}};
+    const vs='attribute vec3 aPosition;attribute vec3 aNormal;uniform mat4 uMvp;uniform mat4 uModel;varying vec3 vNormal;varying vec3 vPosition;void main(){vec4 p=uModel*vec4(aPosition,1.0);vPosition=p.xyz;vNormal=normalize(mat3(uModel)*aNormal);gl_Position=uMvp*vec4(aPosition,1.0);}';
+    const fs='precision mediump float;uniform vec3 uColor;uniform float uAlpha;varying vec3 vNormal;varying vec3 vPosition;void main(){vec3 n=normalize(vNormal);vec3 light=normalize(vec3(-0.45,0.8,0.65));float diffuse=max(dot(n,light),0.0);float rim=pow(1.0-max(dot(n,normalize(vec3(0.0,0.0,1.0))),0.0),2.0);float shade=0.48+diffuse*0.68+rim*0.12;gl_FragColor=vec4(uColor*shade,uAlpha);}';
+    function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s}
+    let program;try{program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vs));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fs));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program))}catch(err){console.warn('3D fighter renderer unavailable:',err);return{available:false,setContender(){},render(){}}}
+    const pos=[],norm=[],idx=[];const lat=20,lon=28;
+    for(let y=0;y<=lat;y++){const v=y/lat,phi=v*Math.PI;for(let x=0;x<=lon;x++){const u=x/lon,theta=u*Math.PI*2,nx=-Math.cos(theta)*Math.sin(phi),ny=Math.cos(phi),nz=Math.sin(theta)*Math.sin(phi);pos.push(nx,ny,nz);norm.push(nx,ny,nz)}}
+    for(let y=0;y<lat;y++)for(let x=0;x<lon;x++){const a=y*(lon+1)+x,b=a+lon+1;idx.push(a,b,a+1,b,b+1,a+1)}
+    const vb=gl.createBuffer(),nb=gl.createBuffer(),ib=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(pos),gl.STATIC_DRAW);gl.bindBuffer(gl.ARRAY_BUFFER,nb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(norm),gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(idx),gl.STATIC_DRAW);
+    const loc={p:gl.getAttribLocation(program,'aPosition'),n:gl.getAttribLocation(program,'aNormal'),m:gl.getUniformLocation(program,'uMvp'),model:gl.getUniformLocation(program,'uModel'),color:gl.getUniformLocation(program,'uColor'),alpha:gl.getUniformLocation(program,'uAlpha')};
+    const ident=()=>[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+    function mul(a,b){const o=new Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++)o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];return o}
+    function tr(x,y,z){const m=ident();m[12]=x;m[13]=y;m[14]=z;return m}
+    function sc(x,y,z){const m=ident();m[0]=x;m[5]=y;m[10]=z;return m}
+    function rz(a){const m=ident(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[1]=s;m[4]=-s;m[5]=c;return m}
+    function rx(a){const m=ident(),c=Math.cos(a),s=Math.sin(a);m[5]=c;m[6]=s;m[9]=-s;m[10]=c;return m}
+    function ry(a){const m=ident(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[2]=-s;m[8]=s;m[10]=c;return m}
+    function perspective(fov,aspect,near,far){const f=1/Math.tan(fov/2),nf=1/(near-far),m=new Array(16).fill(0);m[0]=f/aspect;m[5]=f;m[10]=(far+near)*nf;m[11]=-1;m[14]=2*far*near*nf;return m}
+    function lookAt(ex,ey,ez,cx,cy,cz){let zx=ex-cx,zy=ey-cy,zz=ez-cz,l=Math.hypot(zx,zy,zz)||1;zx/=l;zy/=l;zz/=l;let xx=zz,xy=0,xz=-zx;l=Math.hypot(xx,xz)||1;xx/=l;xz/=l;const yx=zy*xz-zz*xy,yy=zz*xx-zx*xz,yz=zx*xy-zy*xx;return[xx,yx,zx,0,xy,yy,zy,0,xz,yz,zz,0,-(xx*ex+xy*ey+xz*ez),-(yx*ex+yy*ey+yz*ez),-(zx*ex+zy*ey+zz*ez),1]}
+    function rgb(hex){return[(hex>>16&255)/255,(hex>>8&255)/255,(hex&255)/255]}
+    let rival={skin:0xe1a780,hair:0x572b40,top:0xe9e1d3,trim:0x4778a8,shorts:0xc53e4a,glove:0xc73e4a};let width=1,height=1,dpr=1;
+    const colors={};function setContender(c){rival=c;Object.keys(c).forEach(k=>{if(typeof c[k]==='number')colors[k]=rgb(c[k])})}
+    function resize(){const r=target.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);width=Math.max(1,Math.round(r.width*dpr));height=Math.max(1,Math.round(r.height*dpr));if(target.width!==width||target.height!==height){target.width=width;target.height=height}gl.viewport(0,0,width,height)}
+    function part(m,x,y,z,sx,sy,sz,color,alpha=1){let model=mul(mul(m,tr(x,y,z)),sc(sx,sy,sz));gl.uniformMatrix4fv(loc.model,false,new Float32Array(model));gl.uniformMatrix4fv(loc.m,false,new Float32Array(mul(projView,model)));gl.uniform3fv(loc.color,colors[color]||rgb(color));gl.uniform1f(loc.alpha,alpha);gl.drawElements(gl.TRIANGLES,idx.length,gl.UNSIGNED_SHORT,0)}
+    let projView=ident(),time=0,enemyState=null,playerState=null,gameState='ready',stateSince=0,lastGameState='ready';
+    function render(t,e,p,state){time=t;enemyState=e;playerState=p;if(state!==lastGameState){lastGameState=state;stateSince=t}gameState=state;resize();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.enableVertexAttribArray(loc.p);gl.vertexAttribPointer(loc.p,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,nb);gl.enableVertexAttribArray(loc.n);gl.vertexAttribPointer(loc.n,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);
+      const aspect=width/height;projView=mul(perspective(38*Math.PI/180,aspect,.1,30),lookAt(0,1.37,7.1,0,1.25,0));
+      const mode=e.mode,phase=mode==='strike'?Math.sin((1-e.timer/.36)*Math.PI):mode==='windup'?1-e.timer/.9:0,recoil=e.hit>0?e.hit/.22:0,walk=Math.sin(t*4.4),down=state==='knockdown'&&e.down,fall=down?Math.min(1,(t-stateSince)/.28):0;
+      let root=mul(tr((mode==='strike'?phase*(e.attack==='left hook'?-.18:.18):walk*.018)+recoil*.035,fall?-.30*fall:Math.abs(walk)*.015,0),rz(fall?-.85*fall:mode==='windup'?.04:mode==='strike'?-.08*phase:0));
+      // Soft ring shadow and planted boots.
+      part(root,0,.035,-.08,.64,.055,.34,0x141827,.82);
+      const legSwing=mode==='strike'?0:walk*.045;
+      part(root,-.22,.28,0,.13,.31,.16,'skin');part(mul(root,rz(legSwing)),-.22,.12,.08,.19,.09,.28,0x20283a);
+      part(root,.22,.28,0,.13,.31,.16,'skin');part(mul(root,rz(-legSwing)),.22,.12,.08,.19,.09,.28,0x20283a);
+      // Trunks, belt and tapered torso with sculpted pectorals and abdominal definition.
+      part(root,0,.61,0,.38,.28,.22,'shorts');part(root,0,.79,.015,.39,.065,.235,'trim');part(root,-.27,.61,.02,.045,.22,.245,'trim');part(root,.27,.61,.02,.045,.22,.245,'trim');
+      part(root,0,1.16,0,.36,.48,.235,'top');part(root,-.31,1.35,.03,.095,.25,.17,'skin');part(root,.31,1.35,.03,.095,.25,.17,'skin');
+      part(root,-.13,1.39,.222,.15,.13,.045,'skin');part(root,.13,1.39,.222,.15,.13,.045,'skin');part(root,0,1.16,.228,.045,.37,.025,'trim');
+      for(let i=0;i<3;i++){part(root,-.105,1.08-i*.13,.243,.075,.038,.018,'skin');part(root,.105,1.08-i*.13,.243,.075,.038,.018,'skin')}
+      // Neck, ears, head, distinct hairline, eyes, brows, nose and mouth.
+      part(root,0,1.63,0,.13,.19,.14,'skin');part(root,-.235,1.93,0,.055,.09,.05,'skin');part(root,.235,1.93,0,.055,.09,.05,'skin');part(root,0,1.96,.015,.235,.30,.195,'skin');part(root,0,2.18,-.012,.245,.14,.205,'hair');part(root,-.205,1.99,.04,.055,.18,.13,'hair');part(root,.205,1.99,.04,.055,.18,.13,'hair');
+      part(root,-.092,1.99,.194,.051,.026,.018,0xf4e8d2);part(root,.092,1.99,.194,.051,.026,.018,0xf4e8d2);part(root,-.088,1.99,.211,.018,.021,.012,0x28232b);part(root,.096,1.99,.211,.018,.021,.012,0x28232b);part(root,-.09,2.045,.198,.067,.024,.025,'hair');part(root,.09,2.045,.198,.067,.024,.025,'hair');part(root,0,1.91,.222,.043,.075,.042,'skin');part(root,0,1.84,.215,.085,.018,.018,'hair');part(root,0,1.80,.204,.043,.012,.014,0xf4c5a5);
+      // Shoulders, articulated forearms and padded gloves animate through each tell and punch.
+      for(let side of [-1,1]){const isLead=side===(e.attack==='left hook'?-1:1),swing=mode==='strike'&&isLead?phase:mode==='windup'&&isLead?-.22:0,guardY=1.48;part(root,side*.39,1.46,0,.17,.19,.17,'skin');const arm=mul(mul(root,tr(side*.45,guardY,0)),rz(side*(swing*.75+(mode==='windup'?.25:0))));part(arm,0,-.17,.01,.115,.22,.13,'skin');part(arm,side*.015,-.37,.045,.105,.18,.115,'skin');part(arm,side*.018,-.53,.07,.155,.16,.17,'glove');part(arm,side*.02,-.64,.075,.13,.045,.135,'trim');part(arm,-side*.1,-.53,.085,.035,.11,.08,'glove');}
+      // Catchlights, cheek planes and singlet edging.
+      part(root,-.17,1.88,.15,.035,.022,.018,0xffd0aa);part(root,.17,1.88,.15,.035,.022,.018,0xffd0aa);
+      if(e.flash>0){gl.enable(gl.BLEND);part(root,0,1.2,.25,.47,.95,.025,0xffffff,Math.min(.45,e.flash*3))}
+    }
+    window.addEventListener('resize',resize,{passive:true});return{available:true,setContender,render};
+  }
+  const contenders=[
+    {name:'GLASS JOE',country:'FRANCE',skin:0xe1a780,hair:0x572b40,top:0xe9e1d3,trim:0x4778a8,shorts:0xc53e4a,glove:0xc73e4a,style:'Wiry counterpuncher'},
+    {name:'MATEO CRUZ',country:'MEXICO',skin:0x9e6345,hair:0x211c1c,top:0x176b57,trim:0xe5c35c,shorts:0x176b57,glove:0xe6a43b,style:'Fast body attacker'},
+    {name:'IVAN VOLKOV',country:'UKRAINE',skin:0xd9a77d,hair:0x9b704d,top:0x31558b,trim:0xe2e3e7,shorts:0x283c62,glove:0xc23a48,style:'Heavy pressure fighter'},
+    {name:'AMARA OKAFOR',country:'NIGERIA',skin:0x75452f,hair:0x171719,top:0xa94e35,trim:0xf0c764,shorts:0x153d47,glove:0x3c9b82,style:'Patient technical boxer'},
+    {name:'KENJI SATO',country:'JAPAN',skin:0xe4b797,hair:0x201c24,top:0xe9e1d3,trim:0xd64648,shorts:0x222944,glove:0xd64648,style:'Sharp southpaw'},
+    {name:'TITAN REYES',country:'USA',skin:0xb97854,hair:0x302523,top:0x243b6b,trim:0xf0c764,shorts:0xb33343,glove:0x293f78,style:'Tournament champion'}
+  ];
+  let contenderIndex=0, playerKnockdowns=0, enemyKnockdowns=0;
   let state='ready', last=0, elapsed=0, clock=90, audioOn=true, audioCtx=null, hitStop=0, shake=0, particles=[], floating=[];
   const player={health:100,x:300,y:297,dodge:0,dodgeDir:0,punch:0,punchType:'jab',hit:0,stars:0,combo:0,comboTimer:0};
-  const enemy={health:100,x:360,y:285,mode:'idle',timer:1.6,punch:0,hit:0,flash:0,guard:0,attack:'cross',dodgeAnswer:1};
+  const enemy={health:100,x:360,y:285,mode:'idle',timer:1.6,punch:0,hit:0,flash:0,guard:0,attack:'cross',dodgeAnswer:1,down:false};
 
   function sound(freq=220,duration=.08,type='square',vol=.035){
     if(!audioOn)return;
@@ -15,8 +78,11 @@
   }
   function setStatus(text,color){ui.status.textContent=text;if(color)ui.status.style.color=color;else ui.status.style.color=''}
   function updateBars(){ui.playerHealth.style.width=Math.max(0,player.health)+'%';ui.enemyHealth.style.width=Math.max(0,enemy.health)+'%';ui.playerHealthText.textContent=Math.ceil(player.health);ui.enemyHealthText.textContent=Math.ceil(enemy.health);ui.stars.textContent=player.stars;document.querySelector('[data-action="special"]').disabled=player.stars===0||state!=='fight';ui.clock.textContent=`${Math.floor(clock/60)}:${String(Math.max(0,Math.ceil(clock%60))).padStart(2,'0')}`;ui.combo.textContent=player.combo>1?`${player.combo} HIT STREAK`:' ';}
-  function begin(){state='fight';elapsed=0;clock=90;Object.assign(player,{health:100,dodge:0,dodgeDir:0,punch:0,hit:0,stars:0,combo:0,comboTimer:0});Object.assign(enemy,{health:100,mode:'idle',timer:1.4,x:360,y:285,punch:0,hit:0,flash:0,guard:0,attack:'cross',dodgeAnswer:1});particles=[];floating=[];ui.round.textContent='ROUND 1';ui.overlay.classList.add('hidden');ui.stance.textContent='WATCH HIS SHOULDERS';setStatus('BOUT ON — WAIT FOR THE TELL.');updateBars();sound(392,.12,'square');setTimeout(()=>sound(523,.12,'square'),100)}
-  function finish(win){if(state!=='fight')return;state=win?'won':'lost';ui.overlay.classList.remove('hidden');ui.overlayTitle.innerHTML=win?'YOU ARE THE<br/><em>CHAMPION!</em>':'TAKE A BREATHER<br/><em>REMATCH?</em>';ui.overlayText.textContent=win?'A clean knockout! The crowd is on its feet.':'The bell saved you. Study the tells and try again.';ui.start.innerHTML=(win?'FIGHT AGAIN':'TRY AGAIN')+' <span>▶</span>';ui.stance.textContent=win?'CHAMPION':'KNOCKOUT';setStatus(win?'MAIN EVENT WON!':'BOUT OVER — GET BACK IN THERE.',win?'#ffcc58':'#ff8290');sound(win?660:110,.35,'triangle',.055);}
+  function updateContender(){const c=contenders[contenderIndex];document.querySelector('.joe-name').textContent=c.name;document.querySelector('.rival-label small').textContent=c.country+' • '+(contenderIndex+1)+'/'+contenders.length;document.querySelector('.joe-portrait').setAttribute('aria-label',c.name);renderer.setContender(c)}
+  function resetExchange(){player.health=100;enemy.health=100;enemy.mode='idle';enemy.down=false;enemy.timer=1.35;enemy.hit=0;enemy.flash=0;enemy.guard=0;enemy.punch=0;player.dodge=0;player.punch=0;player.hit=0;player.stars=Math.min(3,player.stars+1);updateBars()}
+  function begin(){if(state==='won'||state==='lost')contenderIndex=0;playerKnockdowns=0;enemyKnockdowns=0;updateContender();state='fight';elapsed=0;clock=90;Object.assign(player,{health:100,dodge:0,dodgeDir:0,punch:0,hit:0,stars:0,combo:0,comboTimer:0});Object.assign(enemy,{health:100,mode:'idle',timer:1.4,x:360,y:285,punch:0,hit:0,flash:0,guard:0,attack:'cross',dodgeAnswer:1});particles=[];floating=[];ui.round.textContent=`BOUT 1/${contenders.length} · KD 0–0`;ui.overlay.classList.add('hidden');ui.stance.textContent='WATCH HIS SHOULDERS';setStatus('BOUT ON — THREE KNOCKDOWNS TO WIN.');updateBars();sound(392,.12,'square');setTimeout(()=>sound(523,.12,'square'),100)}
+  function knockdown(byPlayer){if(state!=='fight')return;state='knockdown';enemy.down=byPlayer;if(byPlayer)enemyKnockdowns++;else playerKnockdowns++;const count=byPlayer?enemyKnockdowns:playerKnockdowns;ui.round.textContent=`BOUT ${contenderIndex+1}/${contenders.length} · KD ${playerKnockdowns}–${enemyKnockdowns}`;setStatus(byPlayer?`${contenders[contenderIndex].name} DOWN — ${count}/3`:`YOU’RE DOWN — ${count}/3`,byPlayer?'#ffcc58':'#ff8290');ui.stance.textContent=byPlayer?'KNOCKDOWN!':'DOWN!';sound(byPlayer?110:75,.3,'sawtooth',.05);if(count>=3){if(byPlayer){if(contenderIndex===contenders.length-1){state='won';ui.overlayTitle.innerHTML='TOURNAMENT<br/><em>CHAMPION!</em>';ui.overlayText.textContent='Six contenders defeated. The title is yours!';ui.start.innerHTML='FIGHT AGAIN <span>▶</span>';ui.overlay.classList.remove('hidden');setStatus('THE ARENA CHAMPION!','#ffcc58');ui.stance.textContent='CHAMPION';return}contenderIndex++;playerKnockdowns=0;enemyKnockdowns=0;ui.round.textContent=`BOUT ${contenderIndex+1}/${contenders.length} · KD 0–0`;updateContender();ui.overlayTitle.innerHTML='NEXT CHALLENGER<br/><em>ENTER THE RING</em>';ui.overlayText.textContent=`${contenders[contenderIndex].name} of ${contenders[contenderIndex].country} steps up. ${contenders[contenderIndex].style}.`;ui.start.innerHTML='NEXT BOUT <span>▶</span>'}else{state='lost';ui.overlayTitle.innerHTML='KNOCKED OUT<br/><em>REMATCH?</em>';ui.overlayText.textContent=`${contenders[contenderIndex].name} took the bout. Your tournament run ends here.`;ui.start.innerHTML='TRY AGAIN <span>▶</span>'}ui.overlay.classList.remove('hidden');return}setTimeout(()=>{if(state!=='knockdown')return;resetExchange();state='fight';ui.stance.textContent='BACK TO IT';setStatus(byPlayer?'HE’S BACK UP—KEEP THE PRESSURE!':'UP ON YOUR FEET—READ THE TELL!')},1050)}
+  function finish(win){if(state!=='fight')return;knockdown(win)}
   function startPunch(type){if(state!=='fight'||player.punch>0||player.hit>0||player.dodge>0)return;if(type==='special'&&player.stars<1){setStatus('BUILD A STAR WITH A PERFECT DODGE.');return}if(type==='special')player.stars--;player.punch=.31;player.punchType=type;const vulnerable=enemy.mode==='recover';const damage=type==='special'?(vulnerable?36:20):type==='hook'?(vulnerable?22:8):(vulnerable?15:5);const blocked=enemy.mode==='windup'||enemy.mode==='strike';const dealt=blocked?Math.ceil(damage*.42):damage;enemy.health=Math.max(0,enemy.health-dealt);enemy.hit=.22;enemy.flash=.12;enemy.guard=blocked?.28:0;player.combo++;player.comboTimer=2.2;if(player.combo%3===0&&player.stars<3&&vulnerable)player.stars++;floating.push({x:enemy.x,y:enemy.y-83,text:blocked?'BLOCK!':`-${dealt}`,life:.75,color:blocked?'#c5d3e8':type==='special'?'#ffcc58':'#ffffff'});for(let i=0;i<9;i++)particles.push({x:enemy.x-20,y:enemy.y-60,vx:(Math.random()-.5)*190,vy:-Math.random()*160,life:.35+Math.random()*.25,color:type==='special'?'#ffcf55':'#f9f0cf',size:3+Math.random()*4});sound(type==='special'?150:200,.09,'sawtooth',.045);shake=blocked?3:6;if(dealt>=12)hitStop=.07;updateBars();if(enemy.health<=0){setTimeout(()=>finish(true),320)}}
   function dodge(dir){if(state!=='fight'||player.dodge>0||player.hit>0||player.punch>0)return;player.dodge=.58;player.dodgeDir=dir;sound(330,.05,'triangle',.018)}
   function onAction(a){if(a==='left')dodge(-1);else if(a==='right')dodge(1);else startPunch(a)}
@@ -185,13 +251,13 @@
     ctx.restore();
   }
   function draw(){ctx.save();if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);shake*=.85;if(shake<.3)shake=0}drawBackground(elapsed);
-    drawRival();drawPOV();
+    if(!renderer.available)drawRival();drawPOV();
     if(state==='fight'&&(enemy.mode==='windup'||enemy.mode==='feint')){const pulse=.5+.4*Math.sin(elapsed*18);roundRect(268,50,184,30,3,`rgba(255,77,91,${.16+pulse*.25})`);ctx.fillStyle='#fff0c4';ctx.font='bold 13px "DM Mono",monospace';ctx.textAlign='center';ctx.fillText(enemy.attack==='feint'?'DON’T FALL FOR IT':`SLIP ${enemy.dodgeAnswer<0?'LEFT':'RIGHT'}!`,360,70);}
     if(player.punch>0){const progress=1-player.punch/.31;const reach=Math.sin(clamp(progress)*Math.PI);ctx.strokeStyle=player.punchType==='special'?'#ffdf67':'#e9f8ff';ctx.globalAlpha=reach*.72;ctx.lineWidth=3+reach*3;ctx.beginPath();ctx.moveTo(360,330);ctx.lineTo((player.punchType==='hook'?445:375)+(player.punchType==='hook'?1:-.25)*reach*43,283-reach*18);ctx.stroke();ctx.globalAlpha=1}
     for(const p of particles){ctx.globalAlpha=Math.max(0,p.life*2);rect(p.x,p.y,p.size,p.size,p.color)}ctx.globalAlpha=1;
     for(const f of floating){ctx.globalAlpha=Math.min(1,f.life*2);ctx.fillStyle=f.color;ctx.font='900 20px "Barlow Condensed",sans-serif';ctx.textAlign='center';ctx.shadowColor='#172034';ctx.shadowBlur=4;ctx.fillText(f.text,f.x,f.y);ctx.shadowBlur=0}ctx.globalAlpha=1;
     if(state==='ready'){ctx.fillStyle='#ffffff99';ctx.font='11px "DM Mono",monospace';ctx.textAlign='center';ctx.fillText('SLIP THE CALLED DIRECTION • COUNTER WHEN HE’S OPEN',360,409)}
     ctx.restore();}
-  function loop(now){const dt=Math.min(.04,(now-last)/1000||0);last=now;if(hitStop>0){hitStop-=dt}else update(dt);draw();requestAnimationFrame(loop)}
-  updateBars();requestAnimationFrame(loop);
+  function loop(now){const dt=Math.min(.04,(now-last)/1000||0);last=now;if(hitStop>0){hitStop-=dt}else update(dt);draw();renderer.render(now/1000,enemy,player,state);requestAnimationFrame(loop)}
+  updateContender();updateBars();requestAnimationFrame(loop);
 })();
