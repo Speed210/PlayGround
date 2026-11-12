@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#101611" />
+  <title>Desert Command: Frontline</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="game-shell">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">◆</div><div><span class="brand-kicker">TACTICAL OPERATIONS</span><strong>DESERT COMMAND <i> / FRONTLINE</i></strong></div></div>
+      <div class="mission"><span class="live-dot"></span><span id="mission-label">OPERATION: DUST DEVIL</span><small id="mission-status">ELIMINATE ENEMY HQ</small></div>
+      <div class="top-actions"><button class="icon-btn" id="sound-btn" aria-label="Toggle sound">♫</button><button class="icon-btn" id="pause-btn" aria-label="Pause game">Ⅱ</button></div>
+    </header>
+    <section class="battlefield-wrap">
+      <canvas id="battlefield" aria-label="Tactical battlefield"></canvas>
+      <div class="map-vignette"></div>
+      <div class="map-hud"><div class="sector"><b>SECTOR 07</b><span>AL-HAJAR BASIN</span></div><div class="weather"><span>☀</span> 38°C <i>•</i> VIS 4.2 KM</div></div>
+      <div class="objective-card" id="objective-card"><span class="objective-icon">◎</span><div><b>PRIMARY OBJECTIVE</b><span>Destroy the hostile command post</span></div></div>
+      <div class="toast" id="toast"></div>
+      <div class="start-screen" id="start-screen">
+        <div class="briefing-card">
+          <div class="briefing-eyebrow"><span>FIELD BRIEFING</span><span>MISSION 01 / 04</span></div>
+          <div class="briefing-title">DUST<br/><em>DEVIL</em></div>
+          <p>Hostile forces have seized the basin. Establish your foothold, build a strike force, and take out their command post.</p>
+          <div class="briefing-stats"><div><small>THREAT LEVEL</small><b class="threat">MEDIUM</b></div><div><small>STARTING FUNDS</small><b>$2,400</b></div><div><small>EST. DURATION</small><b>5–8 MIN</b></div></div>
+          <button class="start-btn" id="start-btn"><span>DEPLOY FORCES</span><b>→</b></button>
+          <div class="briefing-foot">REAL-TIME STRATEGY <span>•</span> TOUCH CONTROLS READY</div>
+        </div>
+        <div class="start-art-label"><span class="art-cross">+</span> OPERATION DUST DEVIL <small>LIVE THEATER MAP</small></div>
+      </div>
+      <div class="pause-screen hidden" id="pause-screen"><div class="pause-card"><small>FIELD OPERATIONS</small><h2>PAUSED</h2><button id="resume-btn" class="start-btn"><span>RESUME MISSION</span><b>→</b></button><button id="restart-btn" class="text-btn">RESTART OPERATION</button></div></div>
+      <div class="end-screen hidden" id="end-screen"><div class="pause-card"><small id="end-kicker">MISSION REPORT</small><h2 id="end-title">VICTORY</h2><p id="end-copy">The basin is under our control.</p><button id="again-btn" class="start-btn"><span>DEPLOY AGAIN</span><b>→</b></button></div></div>
+    </section>
+    <footer class="command-deck">
+      <div class="resource-strip"><div class="resource"><span class="resource-icon cash">$</span><div><small>CREDITS</small><b id="credits">2,400</b></div><span class="income" id="income">+12/s</span></div><div class="resource-divider"></div><div class="resource"><span class="resource-icon power">ϟ</span><div><small>POWER GRID</small><b id="power">STABLE</b></div><span class="power-bars"><i></i><i></i><i></i><i></i></span></div><div class="deck-spacer"></div><div class="army-count"><span class="tiny-vehicle">▰</span><b id="army-count">03</b><small>UNITS</small></div></div>
+      <div class="control-row">
+        <div class="selection-panel" id="selection-panel"><div class="selection-icon" id="selection-icon">⌖</div><div class="selection-copy"><small id="selection-type">COMMAND POST</small><b id="selection-name">Select a unit</b><div class="health-track"><i id="selection-health"></i></div></div></div>
+        <div class="command-actions" id="command-actions">
+          <button class="action-card selected-action" data-action="select"><span class="action-glyph">⌖</span><span>SELECT</span><kbd>1</kbd></button>
+          <button class="action-card" data-action="move"><span class="action-glyph">➤</span><span>MOVE</span><kbd>2</kbd></button>
+          <button class="action-card" data-action="attack"><span class="action-glyph">⊕</span><span>ATTACK</span><kbd>3</kbd></button>
+        </div>
+        <div class="build-actions">
+          <div class="build-heading"><span>REINFORCEMENTS</span><small>PRODUCTION</small></div>
+          <button class="build-card" data-unit="infantry"><span class="unit-art infantry-art">♟</span><span class="build-copy"><b>RIFLE SQUAD</b><small>6 TROOPS <i>·</i> $450</small></span><span class="build-price">450</span></button>
+          <button class="build-card" data-unit="tank"><span class="unit-art tank-art">▰</span><span class="build-copy"><b>STRIKE TANK</b><small>ARMORED <i>·</i> $900</small></span><span class="build-price">900</span></button>
+          <button class="build-card" data-unit="scout"><span class="unit-art scout-art">◈</span><span class="build-copy"><b>SCOUT BUGGY</b><small>FAST <i>·</i> $650</small></span><span class="build-price">650</span></button>
+        </div>
+      </div>
+      <div class="mobile-hint" id="mobile-hint">TAP A UNIT · CHOOSE MOVE · TAP THE MAP</div>
+    </footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
