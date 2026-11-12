@@ -134,6 +134,16 @@ export function createBattlefield(canvas) {
       box(turret, 'turret housing', [4.5, 2, 4], [0, 0, 0], primary);
       cylinder(turret, 'gun barrel', .34, .42, 5.6, [0, .35, -3.5], metal, 10).rotation.x = Math.PI / 2;
       box(turret, 'turret hatch', [1.7, .25, 1.7], [0, 1.15, 0], light);
+    } else if (entity.kind === 'tech') {
+      box(model, 'technology foundation', [13, .8, 11], [0, .4, 0], dark);
+      box(model, 'technology hall', [9, 4.6, 8], [0, 2.8, 0], primary);
+      box(model, 'technology roof', [10, .7, 9], [0, 5.45, 0], light);
+      box(model, 'operations window', [5.4, 1.4, .15], [0, 3.3, -4.08], glass);
+      for (let i = -1; i <= 1; i++) {
+        cylinder(model, 'communications mast', .12, .18, 3.4, [i * 3.8, 6.6, 2.4], metal, 8);
+        box(model, 'mast beacon', [.45, .35, .45], [i * 3.8, 8.4, 2.4], trim);
+      }
+      box(model, 'command insignia', [2.4, .18, .16], [0, 2.9, -4.18], trim);
     } else if (entity.kind === 'infantry') {
       for (let i = 0; i < 4; i++) {
         const soldier = new THREE.Group(); soldier.position.set((i % 2 ? 1 : -1) * .75, 0, (i < 2 ? -1 : 1) * .72); model.add(soldier);
@@ -145,6 +155,7 @@ export function createBattlefield(canvas) {
     } else {
       const collector = entity.kind === 'collector';
       const scout = entity.kind === 'scout';
+      const artillery = entity.kind === 'artillery';
       const vehicle = new THREE.Group(); vehicle.name = 'vehicle'; model.add(vehicle);
       if (collector) {
         box(vehicle, 'truck chassis', [5.4, 1, 9.2], [0, .8, 0], dark);
@@ -154,13 +165,14 @@ export function createBattlefield(canvas) {
         box(vehicle, 'hopper cargo', [3.4, .8, 3.3], [0, 3, 2.2], mat('#a88748', .55, .25));
         for (const x of [-2.7, 2.7]) for (const z of [-2.8, 2.8]) cylinder(vehicle, 'truck wheel', .95, .95, .55, [x, .72, z], dark, 10).rotation.z = Math.PI / 2;
       } else {
-        box(vehicle, 'vehicle hull', [scout ? 4.8 : 6, 1.4, scout ? 7.2 : 9.2], [0, 1.1, 0], primary);
-        box(vehicle, 'vehicle deck', [scout ? 4.1 : 5, .7, scout ? 4.6 : 6.1], [0, 2.05, .1], light);
-        for (const x of [-1, 1]) box(vehicle, 'track', [1, 1, scout ? 7 : 9.5], [x * (scout ? 2.65 : 3.2), .75, 0], dark);
+        box(vehicle, 'vehicle hull', [scout ? 4.8 : artillery ? 6.8 : 6, 1.4, scout ? 7.2 : artillery ? 11 : 9.2], [0, 1.1, 0], primary);
+        box(vehicle, 'vehicle deck', [scout ? 4.1 : artillery ? 5.8 : 5, .7, scout ? 4.6 : artillery ? 8 : 6.1], [0, 2.05, .1], light);
+        for (const x of [-1, 1]) box(vehicle, 'track', [1, 1, scout ? 7 : artillery ? 11.5 : 9.5], [x * (scout ? 2.65 : artillery ? 3.5 : 3.2), .75, 0], dark);
         const turret = new THREE.Group(); turret.name = 'turret'; turret.position.set(0, 2.5, -.2); vehicle.add(turret);
         if (scout) box(turret, 'scout cabin', [2.5, 1.3, 2.5], [0, .3, 0], primary);
+        else if (artillery) box(turret, 'artillery shield', [3.8, 2.2, 3.5], [0, .2, .4], primary);
         else cylinder(turret, 'tank turret', 1.8, 2.1, 1.3, [0, .2, 0], primary, 10);
-        box(turret, 'main gun', [.42, .42, scout ? 3.6 : 6.2], [0, .35, -3], metal);
+        box(turret, 'main gun', [artillery ? .58 : .42, artillery ? .58 : .42, scout ? 3.6 : artillery ? 8.6 : 6.2], [0, .35, scout ? -3 : artillery ? -4.4 : -3], metal);
       }
     }
     const ring = new THREE.Mesh(new THREE.RingGeometry(.8, 1, 36), basic(friendly ? '#d9f17d' : '#e36c51', .92));
