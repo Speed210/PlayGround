@@ -315,7 +315,7 @@ export function createBattlefield(canvas) {
     }
     let changed = false;
     for (let i = 0; i < discovered.length; i++) {
-      const alpha = visibleCells[i] ? 0 : discovered[i] ? 168 : 248;
+      const alpha = discovered[i] ? 0 : 248;
       const p = i * 4;
       if (fogPixels.data[p] !== 0 || fogPixels.data[p + 1] !== 0 || fogPixels.data[p + 2] !== 0 || fogPixels.data[p + 3] !== alpha) {
         fogPixels.data[p] = fogPixels.data[p + 1] = fogPixels.data[p + 2] = 0;
