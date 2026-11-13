@@ -119,6 +119,14 @@ export function createBattlefield(canvas) {
       box(model, 'power roof', [7.6, .65, 6.6], [0, 4.4, 0], light);
       for (let i = -1; i <= 1; i++) cylinder(model, 'cooling stack', .5, .72, 3.6, [i * 2.3, 2.2, 3.2], metal, 10);
       box(model, 'power insignia', [2.4, .15, .12], [0, 3, -2.98], trim);
+    } else if (entity.kind === 'tech') {
+      box(model, 'research foundation', [12, .8, 10], [0, .4, 0], dark);
+      box(model, 'research hall', [8.5, 4.2, 7], [0, 2.5, 0], primary);
+      box(model, 'research roof', [9.3, .7, 7.8], [0, 4.95, 0], light);
+      cylinder(model, 'radar mast', .2, .28, 4.2, [0, 7, 0], metal, 8);
+      const dish = new THREE.Mesh(new THREE.SphereGeometry(1.7, 12, 8, 0, Math.PI * 2, 0, Math.PI * .55), trim);
+      dish.position.set(0, 8.5, 0); dish.rotation.x = Math.PI; model.add(dish);
+      box(model, 'research entrance', [2.4, 2.8, .18], [0, 1.8, -3.58], dark);
     } else if (entity.kind === 'barracks' || entity.kind === 'factory') {
       const factory = entity.kind === 'factory';
       box(model, 'production foundation', [factory ? 13 : 11, .8, factory ? 10 : 9], [0, .4, 0], dark);
@@ -162,6 +170,25 @@ export function createBattlefield(canvas) {
         else cylinder(turret, 'tank turret', 1.8, 2.1, 1.3, [0, .2, 0], primary, 10);
         box(turret, 'main gun', [.42, .42, scout ? 3.6 : 6.2], [0, .35, -3], metal);
       }
+    }
+    if (friendly && faction === 'usa' && entity.kind === 'hq') {
+      const radar = new THREE.Group(); radar.position.set(5.3, 5.2, 1.8); model.add(radar);
+      cylinder(radar, 'radar mount', .18, .24, 1.6, [0, .8, 0], metal, 8);
+      const dish = new THREE.Mesh(new THREE.SphereGeometry(1.05, 10, 7, 0, Math.PI * 2, 0, Math.PI * .55), trim); dish.position.y = 1.7; dish.rotation.x = Math.PI; radar.add(dish);
+    } else if (friendly && faction === 'china' && ['hq','barracks','tech'].includes(entity.kind)) {
+      for (const x of [-4.3, 4.3]) {
+        cylinder(model, 'red standard pole', .09, .12, 4, [x, 2.2, 2.8], trim, 7);
+        box(model, 'red standard', [1.35, .9, .08], [x + .58, 3.4, 2.8], primary);
+      }
+    } else if (friendly && faction === 'russia' && ['hq','factory','tech'].includes(entity.kind)) {
+      for (const x of [-4.1, 4.1]) box(model, 'reinforced armor plate', [1.5, 2.2, 1.1], [x, 1.5, 2.4], metal);
+      cylinder(model, 'exhaust stack', .28, .42, 2.1, [4.1, 4.3, -2.7], dark, 8);
+    }
+    if (friendly && entity.kind === 'infantry' && faction === 'china') {
+      box(model, 'field pack', [.55, .8, .45], [0, 1.2, .48], trim);
+      box(model, 'rifle stock', [.22, .2, .8], [.35, 1.05, -1.35], primary);
+    } else if (friendly && entity.kind === 'infantry' && faction === 'russia') {
+      for (const x of [-.9, .9]) box(model, 'reinforced shoulder', [.5, .42, .55], [x, 1.45, 0], trim);
     }
     const ring = new THREE.Mesh(new THREE.RingGeometry(.8, 1, 36), basic(friendly ? '#d9f17d' : '#e36c51', .92));
     ring.rotation.x = -Math.PI / 2; ring.position.y = .12; ring.name = 'selection-ring'; group.add(ring);
