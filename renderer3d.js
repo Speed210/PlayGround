@@ -9,6 +9,8 @@ export function createBattlefield(canvas) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
 
+  const WORLD = 160;
+  const HALF_WORLD = WORLD / 2;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#71775c');
   scene.fog = new THREE.Fog('#71775c', 125, 230);
@@ -26,7 +28,15 @@ export function createBattlefield(canvas) {
   scene.add(sun);
   const fill = new THREE.DirectionalLight('#b4c6ce', .8); fill.position.set(30, 35, 40); scene.add(fill);
 
-  const entityRoot = new THREE.Group(); scene.add(entityRoot);
+  const entityRoot = new THREE.Group(); entityRoot.renderOrder = 3; scene.add(entityRoot);
+  const fogCanvas = document.createElement('canvas'); fogCanvas.width = fogCanvas.height = 128;
+  const fogContext = fogCanvas.getContext('2d');
+  const fogPixels = fogContext.createImageData(128, 128);
+  const discovered = new Uint8Array(128 * 128), visibleCells = new Uint8Array(128 * 128);
+  const fogTexture = new THREE.CanvasTexture(fogCanvas); fogTexture.colorSpace = THREE.SRGBColorSpace;
+  const fogMaterial = new THREE.MeshBasicMaterial({ map: fogTexture, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  const fogPlane = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD), fogMaterial);
+  fogPlane.rotation.x = -Math.PI / 2; fogPlane.position.y = .08; fogPlane.renderOrder = 2; scene.add(fogPlane);
   const resourceRoot = new THREE.Group(); scene.add(resourceRoot);
   const transientRoot = new THREE.Group(); scene.add(transientRoot);
   const entities = new Map(), nodes = [], decor = [];
@@ -50,14 +60,14 @@ export function createBattlefield(canvas) {
     mesh.name = name; mesh.position.set(...pos); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
   }
   function position(obj, x, y, lift = 0) {
-    obj.position.set((x - .5) * 100 * aspect, lift, (y - .5) * 100);
+    obj.position.set((x - .5) * WORLD * aspect, lift, (y - .5) * WORLD);
   }
   function makeGround() {
     const texture = makeTerrainTexture();
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ map: texture, color: '#b0aa7c', roughness: 1 }));
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD), new THREE.MeshStandardMaterial({ map: texture, color: '#b0aa7c', roughness: 1 }));
     ground.rotation.x = -Math.PI / 2; ground.scale.x = aspect; ground.receiveShadow = true; ground.name = 'terrain'; scene.add(ground);
     const lines = new THREE.Group();
-    const points = [[-53, -43], [-28, -24], [-8, -8], [12, 12], [30, 28], [53, 44]];
+    const points = [[-82, -68], [-48, -42], [-14, -12], [22, 18], [52, 48], [82, 70]];
     for (let i = 0; i < points.length - 1; i++) {
       const [x1, z1] = points[i], [x2, z2] = points[i + 1];
       const dx = x2 - x1, dz = z2 - z1, length = Math.hypot(dx, dz), angle = Math.atan2(-dx, dz);
@@ -69,7 +79,7 @@ export function createBattlefield(canvas) {
     scene.add(lines);
     for (let i = 0; i < 17; i++) {
       const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(.55 + (i % 3) * .22, 0), mat(i % 2 ? '#6d6a56' : '#81785e'));
-      rock.position.set(Math.sin(i * 17.3) * 47 * aspect, .22, Math.cos(i * 8.7) * 44); rock.scale.set(1.4, .55, .9); rock.rotation.y = i; rock.castShadow = true; scene.add(rock);
+      rock.position.set(Math.sin(i * 17.3) * 75 * aspect, .22, Math.cos(i * 8.7) * 70); rock.scale.set(1.4, .55, .9); rock.rotation.y = i; rock.castShadow = true; scene.add(rock);
     }
   }
   makeGround();
@@ -78,9 +88,10 @@ export function createBattlefield(canvas) {
     const w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
     aspect = w / h;
     renderer.setSize(w, h, false);
-    camera.left = -50 * aspect / currentZoom; camera.right = 50 * aspect / currentZoom;
-    camera.top = 50 / currentZoom; camera.bottom = -50 / currentZoom; camera.updateProjectionMatrix();
+    camera.left = -HALF_WORLD * aspect / currentZoom; camera.right = HALF_WORLD * aspect / currentZoom;
+    camera.top = HALF_WORLD / currentZoom; camera.bottom = -HALF_WORLD / currentZoom; camera.updateProjectionMatrix();
     const ground = scene.getObjectByName('terrain'); if (ground) ground.scale.x = aspect;
+    fogPlane.scale.x = aspect;
   }
   function buildEntity(entity, faction) {
     const group = new THREE.Group(), model = new THREE.Group(); group.add(model);
@@ -144,31 +155,119 @@ export function createBattlefield(canvas) {
       box(turret, 'turret hatch', [1.7, .25, 1.7], [0, 1.15, 0], light);
     } else if (entity.kind === 'infantry') {
       for (let i = 0; i < 4; i++) {
-        const soldier = new THREE.Group(); soldier.position.set((i % 2 ? 1 : -1) * .75, 0, (i < 2 ? -1 : 1) * .72); model.add(soldier);
-        cylinder(soldier, 'boots', .34, .4, .35, [0, .22, 0], dark, 7);
-        box(soldier, 'uniform', [.65, 1.05, .55], [0, .95, 0], primary);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(.31, 8, 7), light); head.position.set(0, 1.72, 0); head.castShadow = true; soldier.add(head);
-        box(soldier, 'rifle', [.16, .15, 1.35], [.35, 1.05, -.68], metal);
+        const soldier = new THREE.Group();
+        soldier.position.set((i % 2 ? 1 : -1) * .82, 0, (i < 2 ? -1 : 1) * .78); model.add(soldier);
+        const skin = mat(friendly && faction === 'china' ? '#c59067' : '#b98e6b');
+        const cloth = mat(friendly && faction === 'russia' ? '#55664c' : friendly && faction === 'china' ? '#8b6348' : '#59634d');
+        const boot = mat('#302f2a'), armor = mat(friendly ? p.primary : '#654334');
+        cylinder(soldier, 'neck', .13, .15, .22, [0, 1.48, 0], skin, 8);
+        const torso = box(soldier, 'field uniform', [.66, .78, .42], [0, 1.03, 0], cloth);
+        box(soldier, 'plate carrier', [.7, .45, .16], [0, 1.12, -.23], armor);
+        for (let pouch = -1; pouch <= 1; pouch++) box(soldier, 'magazine pouch', [.16, .2, .12], [pouch * .2, .99, -.34], trim);
+        box(soldier, 'backpack', [.48, .62, .28], [0, 1.15, .31], dark);
+        box(soldier, 'shoulder strap', [.1, .62, .09], [-.21, 1.14, -.34], trim).rotation.z = -.25;
+        box(soldier, 'shoulder strap', [.1, .62, .09], [.21, 1.14, -.34], trim).rotation.z = .25;
+        for (const side of [-1, 1]) {
+          const leg = box(soldier, 'combat trousers', [.25, .65, .29], [side * .19, .39, .02], cloth);
+          leg.rotation.x = side * -.05;
+          box(soldier, 'knee pad', [.27, .16, .09], [side * .19, .43, -.17], dark);
+          box(soldier, 'combat boot', [.3, .18, .42], [side * .19, .12, -.08], boot);
+          const arm = box(soldier, 'uniform sleeve', [.23, .62, .27], [side * .43, 1.06, -.06], cloth);
+          arm.rotation.z = side * -.2; arm.rotation.x = -.35;
+          const hand = new THREE.Mesh(new THREE.SphereGeometry(.13, 8, 6), skin);
+          hand.position.set(side * .48, .83, -.34); hand.castShadow = true; soldier.add(hand);
+        }
+        const head = new THREE.Mesh(new THREE.SphereGeometry(.25, 10, 8), skin);
+        head.position.set(0, 1.72, -.02); head.castShadow = true; soldier.add(head);
+        cylinder(soldier, 'helmet shell', .29, .31, .22, [0, 1.92, -.02], friendly && faction === 'china' ? trim : cloth, 10);
+        box(soldier, 'helmet brim', [.62, .07, .48], [0, 1.84, -.03], friendly && faction === 'china' ? trim : cloth);
+        box(soldier, 'helmet insignia', [.12, .12, .04], [0, 1.94, -.29], trim);
+        box(soldier, 'rifle stock', [.15, .16, .42], [.26, 1.18, -.35], dark);
+        box(soldier, 'service rifle', [.14, .14, 1.12], [.26, 1.18, -.98], metal);
+        cylinder(soldier, 'rifle muzzle', .055, .055, .16, [.26, 1.18, -1.61], dark, 7);
+        box(soldier, 'rifle magazine', [.12, .34, .14], [.26, .96, -.87], dark).rotation.x = -.18;
+        box(soldier, 'sling', [.06, .48, .06], [.38, .98, -.66], trim).rotation.x = -.45;
+        torso.castShadow = true;
       }
     } else {
       const collector = entity.kind === 'collector';
       const scout = entity.kind === 'scout';
       const vehicle = new THREE.Group(); vehicle.name = 'vehicle'; model.add(vehicle);
       if (collector) {
-        box(vehicle, 'truck chassis', [5.4, 1, 9.2], [0, .8, 0], dark);
-        box(vehicle, 'truck cab', [4.5, 2.6, 3.4], [0, 2.2, -2.3], primary);
-        box(vehicle, 'truck windshield', [3.6, 1.3, .12], [0, 2.45, -4.02], glass);
-        box(vehicle, 'ore hopper', [4.5, 1.8, 4.5], [0, 2, 2.2], mat('#756a49'));
-        box(vehicle, 'hopper cargo', [3.4, .8, 3.3], [0, 3, 2.2], mat('#a88748', .55, .25));
-        for (const x of [-2.7, 2.7]) for (const z of [-2.8, 2.8]) cylinder(vehicle, 'truck wheel', .95, .95, .55, [x, .72, z], dark, 10).rotation.z = Math.PI / 2;
+        box(vehicle, 'armored truck chassis', [5.4, .8, 9.4], [0, .78, 0], dark);
+        box(vehicle, 'front bumper', [5.1, .32, .35], [0, .88, -4.7], metal);
+        box(vehicle, 'truck cab', [4.45, 2.55, 3.6], [0, 2.18, -2.65], primary);
+        box(vehicle, 'cab roof', [4.6, .28, 3.5], [0, 3.55, -2.58], light);
+        box(vehicle, 'truck windshield', [3.6, 1.15, .12], [0, 2.53, -4.47], glass);
+        for (const x of [-1.75, 1.75]) {
+          box(vehicle, 'cab side window', [.1, 1.05, 1.55], [x, 2.55, -2.6], glass);
+          box(vehicle, 'door handle', [.08, .1, .42], [x * 1.03, 1.95, -1.42], trim);
+          box(vehicle, 'headlamp', [.48, .42, .15], [x * .85, 1.2, -4.78], trim);
+        }
+        box(vehicle, 'ore hopper', [4.7, 1.9, 4.75], [0, 1.95, 2.18], mat('#756a49'));
+        box(vehicle, 'hopper cargo', [3.7, .74, 3.65], [0, 3.15, 2.18], mat('#a88748', .55, .25));
+        for (const x of [-2.7, 2.7]) for (const z of [-3.35, -.8, 2.65]) {
+          cylinder(vehicle, 'truck tire', .82, .82, .58, [x, .78, z], dark, 12).rotation.z = Math.PI / 2;
+          cylinder(vehicle, 'wheel hub', .34, .34, .61, [x * 1.01, .78, z], metal, 10).rotation.z = Math.PI / 2;
+        }
+        box(vehicle, 'exhaust stack', [.25, 1.55, .25], [2.05, 2.25, -.25], metal);
+        box(vehicle, 'cargo tie bar', [4.9, .18, .2], [0, 3.05, -.15], trim);
+      } else if (scout) {
+        box(vehicle, 'recon chassis', [4.5, .72, 7.4], [0, .78, 0], dark);
+        box(vehicle, 'armored scout hull', [4.5, 1.25, 6.8], [0, 1.38, .05], primary);
+        box(vehicle, 'hood armor', [4.25, .48, 2.25], [0, 1.98, -2.12], light);
+        box(vehicle, 'windshield', [3.65, 1.02, .12], [0, 2.35, -1.08], glass).rotation.x = -.12;
+        box(vehicle, 'roof rack', [3.6, .16, 2.65], [0, 2.96, .3], metal);
+        for (const x of [-1, 1]) {
+          box(vehicle, 'door armor', [.15, .95, 2.2], [x * 2.25, 1.75, .2], light);
+          box(vehicle, 'side glass', [.1, .64, 1.75], [x * 2.34, 2.36, .12], glass);
+          box(vehicle, 'headlamp', [.55, .4, .18], [x * 1.55, 1.56, -3.4], trim);
+          for (const z of [-2.45, 2.35]) {
+            cylinder(vehicle, 'off-road tire', .82, .82, .5, [x * 2.17, .78, z], dark, 12).rotation.z = Math.PI / 2;
+            cylinder(vehicle, 'wheel hub', .34, .34, .54, [x * 2.18, .78, z], metal, 10).rotation.z = Math.PI / 2;
+          }
+        }
+        const turret = new THREE.Group(); turret.name = 'turret'; turret.position.set(0, 2.9, .4); vehicle.add(turret);
+        box(turret, 'weapon ring', [2.4, .2, 2.4], [0, -.05, 0], dark);
+        box(turret, 'scout weapon mount', [2.05, 1.25, 1.9], [0, .62, 0], primary);
+        box(turret, 'scout gun barrel', [.22, .22, 3.25], [0, .8, -2.1], metal);
+        box(turret, 'radio aerial', [.07, 1.8, .07], [.8, 1.55, .45], dark);
       } else {
-        box(vehicle, 'vehicle hull', [scout ? 4.8 : 6, 1.4, scout ? 7.2 : 9.2], [0, 1.1, 0], primary);
-        box(vehicle, 'vehicle deck', [scout ? 4.1 : 5, .7, scout ? 4.6 : 6.1], [0, 2.05, .1], light);
-        for (const x of [-1, 1]) box(vehicle, 'track', [1, 1, scout ? 7 : 9.5], [x * (scout ? 2.65 : 3.2), .75, 0], dark);
-        const turret = new THREE.Group(); turret.name = 'turret'; turret.position.set(0, 2.5, -.2); vehicle.add(turret);
-        if (scout) box(turret, 'scout cabin', [2.5, 1.3, 2.5], [0, .3, 0], primary);
-        else cylinder(turret, 'tank turret', 1.8, 2.1, 1.3, [0, .2, 0], primary, 10);
-        box(turret, 'main gun', [.42, .42, scout ? 3.6 : 6.2], [0, .35, -3], metal);
+        const width = faction === 'china' ? 6.7 : 6.2;
+        const length = faction === 'china' ? 9.8 : 9.2;
+        box(vehicle, 'lower armored hull', [width, 1.05, length], [0, .82, .05], dark);
+        box(vehicle, 'sloped upper glacis', [width - .35, 1.2, 6.2], [0, 1.82, -1.05], primary);
+        box(vehicle, 'engine deck', [width - .5, .62, 2.65], [0, 1.72, 3.03], light);
+        box(vehicle, 'front glacis plate', [width - .65, .28, .18], [0, 2.25, -4.52], trim);
+        for (const x of [-1, 1]) {
+          box(vehicle, 'track frame', [1.05, 1.1, 9.8], [x * 3.25, .78, .02], dark);
+          for (let i = 0; i < 7; i++) {
+            const z = -3.55 + i * 1.18;
+            cylinder(vehicle, 'road wheel', .57, .57, .18, [x * 3.25, .75, z], metal, 12).rotation.z = Math.PI / 2;
+            cylinder(vehicle, 'wheel hub', .22, .22, .2, [x * 3.37, .75, z], trim, 10).rotation.z = Math.PI / 2;
+          }
+          for (let i = 0; i < 12; i++) {
+            const z = -4.35 + i * .78;
+            box(vehicle, 'individual track shoe', [.12, .16, .64], [x * 3.79, 1.22, z], metal, false);
+          }
+          box(vehicle, 'side armor skirt', [.18, .58, 5.2], [x * 3.82, 1.62, .2], primary);
+          for (let i = 0; i < 3; i++) box(vehicle, 'side armor panel', [.2, .75, 1.35], [x * 3.94, 1.65, -1.15 + i * 1.55], light);
+        }
+        for (let i = 0; i < 5; i++) box(vehicle, 'engine vent', [.18, .08, .48], [-1.5 + i * .75, 2.06, 3.15], dark);
+        const turret = new THREE.Group(); turret.name = 'turret'; turret.position.set(0, 2.48, -.35); vehicle.add(turret);
+        cylinder(turret, 'turret race', 2.05, 2.2, .35, [0, -.12, 0], metal, 12);
+        const shell = new THREE.Mesh(new THREE.DodecahedronGeometry(1.95, 1), primary);
+        shell.name = 'faceted tank turret'; shell.scale.set(1.14, .72, 1.28); shell.position.set(0, .38, .12); shell.castShadow = true; shell.receiveShadow = true; turret.add(shell);
+        box(turret, 'gun mantlet', [1.3, .92, .9], [0, .5, -1.45], light);
+        cylinder(turret, 'main gun barrel', .25, .38, 5.5, [0, .55, -3.9], metal, 12).rotation.x = Math.PI / 2;
+        cylinder(turret, 'muzzle brake', .34, .32, .6, [0, .55, -6.73], dark, 10).rotation.x = Math.PI / 2;
+        box(turret, 'coaxial gun', [.15, .16, 2.4], [.75, .56, -2.55], dark);
+        cylinder(turret, 'commander hatch', .68, .68, .2, [.8, 1.02, .25], metal, 10);
+        box(turret, 'sight optic', [.46, .38, .3], [-.85, .82, -.55], trim);
+        box(turret, 'turret side applique', [2.25, .75, .32], [1.45, .35, .45], light);
+        box(turret, 'turret side applique', [2.25, .75, .32], [-1.45, .35, .45], light);
+        for (const x of [-1.85, 1.85]) cylinder(turret, 'smoke launcher', .18, .22, .75, [x, .67, -.9], dark, 8).rotation.x = Math.PI / 2;
+        for (let i = 0; i < 4; i++) box(vehicle, 'front headlamp', [.42, .32, .15], [-2.1 + i * 1.4, 1.56, -4.72], trim);
       }
     }
     if (friendly && faction === 'usa' && entity.kind === 'hq') {
@@ -200,18 +299,45 @@ export function createBattlefield(canvas) {
     return group;
   }
 
+  function updateFog(frame) {
+    visibleCells.fill(0);
+    const scouts = [...frame.units, ...frame.buildings].filter(e => e.team === 'blue');
+    for (const source of scouts) {
+      const radius = source.kind === 'hq' ? .13 : source.kind === 'scout' ? .14 : source.kind === 'tank' ? .12 : source.kind === 'infantry' ? .105 : source.kind === 'collector' ? .11 : .085;
+      const cx = source.x * 128, cy = source.y * 128, rx = Math.ceil(radius * 128 / aspect), ry = Math.ceil(radius * 128);
+      for (let y = Math.max(0, Math.floor(cy - ry)); y < Math.min(128, Math.ceil(cy + ry)); y++) {
+        for (let x = Math.max(0, Math.floor(cx - rx)); x < Math.min(128, Math.ceil(cx + rx)); x++) {
+          if (Math.hypot(((x + .5) / 128 - source.x) * aspect, (y + .5) / 128 - source.y) <= radius) {
+            const i = y * 128 + x; visibleCells[i] = 1; discovered[i] = 1;
+          }
+        }
+      }
+    }
+    let changed = false;
+    for (let i = 0; i < discovered.length; i++) {
+      const alpha = visibleCells[i] ? 0 : discovered[i] ? 168 : 248;
+      const p = i * 4;
+      if (fogPixels.data[p] !== 0 || fogPixels.data[p + 1] !== 0 || fogPixels.data[p + 2] !== 0 || fogPixels.data[p + 3] !== alpha) {
+        fogPixels.data[p] = fogPixels.data[p + 1] = fogPixels.data[p + 2] = 0;
+        fogPixels.data[p + 3] = alpha; changed = true;
+      }
+    }
+    if (changed) { fogContext.putImageData(fogPixels, 0, 0); fogTexture.needsUpdate = true; }
+  }
+
   function render(frame) {
     currentZoom = frame.camera.z;
     resize();
-    const centerX = (frame.camera.x - .5) * 100 * aspect;
-    const centerZ = (frame.camera.y - .5) * 100;
-    camera.position.set(centerX, 120, centerZ + 60);
+    const centerX = (frame.camera.x - .5) * WORLD * aspect;
+    const centerZ = (frame.camera.y - .5) * WORLD;
+    camera.position.set(centerX, 190, centerZ + 92);
     camera.lookAt(centerX, 0, centerZ);
     camera.rotation.z = 0;
-    camera.left = -50 * aspect / currentZoom; camera.right = 50 * aspect / currentZoom;
-    camera.top = 50 / currentZoom; camera.bottom = -50 / currentZoom; camera.updateProjectionMatrix();
+    camera.left = -HALF_WORLD * aspect / currentZoom; camera.right = HALF_WORLD * aspect / currentZoom;
+    camera.top = HALF_WORLD / currentZoom; camera.bottom = -HALF_WORLD / currentZoom; camera.updateProjectionMatrix();
 
     const live = new Set();
+    updateFog(frame);
     for (const entity of [...frame.buildings, ...frame.units, ...frame.enemies]) {
       live.add(entity.id);
       let obj = entities.get(entity.id);
@@ -223,7 +349,8 @@ export function createBattlefield(canvas) {
       position(obj, entity.x, entity.y);
       obj.scale.setScalar(scale);
       obj.rotation.y = Math.atan2(frame.camera.x - entity.x, frame.camera.y - entity.y);
-      obj.visible = entity.hp > 0;
+      const fogIndex = Math.max(0, Math.min(127, Math.floor(entity.y * 128))) * 128 + Math.max(0, Math.min(127, Math.floor(entity.x * 128)));
+      obj.visible = entity.hp > 0 && (entity.team === 'blue' || visibleCells[fogIndex] === 1);
       obj.userData.selection.visible = entity === frame.selected;
       obj.userData.selection.scale.setScalar(entity.size ? 1 : .6);
       obj.userData.selection.material.opacity = entity.team === 'blue' ? .9 : .65;
@@ -292,8 +419,8 @@ export function createBattlefield(canvas) {
     for (const shot of frame.shots) {
       if (!shot.target) continue;
       const t = 1 - shot.life / shot.max;
-      const a = new THREE.Vector3((shot.x - .5) * 100 * aspect, .72, (shot.y - .5) * 100);
-      const b = new THREE.Vector3((shot.x + (shot.target.x - shot.x) * t - .5) * 100 * aspect, .72, (shot.y + (shot.target.y - shot.y) * t - .5) * 100);
+      const a = new THREE.Vector3((shot.x - .5) * WORLD * aspect, .72, (shot.y - .5) * WORLD);
+      const b = new THREE.Vector3((shot.x + (shot.target.x - shot.x) * t - .5) * WORLD * aspect, .72, (shot.y + (shot.target.y - shot.y) * t - .5) * WORLD);
       const beam = new THREE.Mesh(new THREE.CylinderGeometry(.075, .075, a.distanceTo(b), 5), basic(shot.color));
       beam.position.copy(a).add(b).multiplyScalar(.5); beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.sub(a).normalize()); transientRoot.add(beam);
     }
@@ -319,6 +446,17 @@ export function createBattlefield(canvas) {
   function disposeTree(root) {
     root.traverse(obj => { if (obj.geometry) obj.geometry.dispose(); });
   }
+  function resetFog() {
+    discovered.fill(0); visibleCells.fill(0);
+    for (let i = 0; i < discovered.length; i++) {
+      const p = i * 4;
+      fogPixels.data[p] = fogPixels.data[p + 1] = fogPixels.data[p + 2] = 0;
+      fogPixels.data[p + 3] = 248;
+    }
+    fogContext.putImageData(fogPixels, 0, 0); fogTexture.needsUpdate = true;
+  }
+
   resize();
-  return { render, resize };
+  resetFog();
+  return { render, resize, resetFog };
 }
