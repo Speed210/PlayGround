@@ -42,22 +42,70 @@ export function createBattlefield(canvas) {
   const entities = new Map(), nodes = [], decor = [];
   let aspect = 1, currentZoom = 1, transientKey = '';
 
-  const materials = new Map();
+  const materials = new Map(), camoMaterials = new Map();
   function mat(color, roughness = .78, metalness = .08) {
     const key = `${color}:${roughness}:${metalness}`;
     if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({ color, roughness, metalness }));
     return materials.get(key);
   }
+  function camouflage(base, patches) {
+    const key = `${base}:${patches.join(',')}`;
+    if (camoMaterials.has(key)) return camoMaterials.get(key);
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = base; ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 145; i++) {
+      const x = Math.random() * 256, y = Math.random() * 256;
+      ctx.fillStyle = patches[i % patches.length]; ctx.globalAlpha = .15 + Math.random() * .24;
+      ctx.beginPath(); ctx.ellipse(x, y, 5 + Math.random() * 21, 3 + Math.random() * 12, Math.random() * Math.PI, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    for (let i = 0; i < 1800; i++) {
+      ctx.fillStyle = Math.random() > .5 ? '#fff' : '#171a15'; ctx.globalAlpha = Math.random() * .045;
+      ctx.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1);
+    }
+    ctx.globalAlpha = 1;
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(1.6, 1.6); texture.anisotropy = 4;
+    const material = new THREE.MeshStandardMaterial({ map: texture, roughness: .88, metalness: .04 });
+    camoMaterials.set(key, material); return material;
+  }
   function basic(color, opacity = 1) {
     return new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, side: THREE.DoubleSide });
   }
+  const roundedShape = new THREE.Shape();
+  roundedShape.moveTo(-.39, -.5); roundedShape.lineTo(.39, -.5); roundedShape.quadraticCurveTo(.5, -.5, .5, -.39);
+  roundedShape.lineTo(.5, .39); roundedShape.quadraticCurveTo(.5, .5, .39, .5); roundedShape.lineTo(-.39, .5);
+  roundedShape.quadraticCurveTo(-.5, .5, -.5, .39); roundedShape.lineTo(-.5, -.39); roundedShape.quadraticCurveTo(-.5, -.5, -.39, -.5);
+  const roundedUnitGeometry = new THREE.ExtrudeGeometry(roundedShape, { depth: .82, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: .09, bevelThickness: .09, curveSegments: 5 });
+  roundedUnitGeometry.translate(0, 0, -.41); roundedUnitGeometry.computeBoundingBox();
   function box(parent, name, size, pos, material, cast = true) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+    const geometry = roundedUnitGeometry.clone();
+    const bounds = geometry.boundingBox;
+    geometry.scale(size[0] / (bounds.max.x - bounds.min.x), size[1] / (bounds.max.y - bounds.min.y), size[2] / (bounds.max.z - bounds.min.z));
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.name = name; mesh.position.set(...pos); mesh.castShadow = cast; mesh.receiveShadow = true; parent.add(mesh); return mesh;
   }
-  function cylinder(parent, name, radiusTop, radiusBottom, height, pos, material, segments = 12) {
+  function cylinder(parent, name, radiusTop, radiusBottom, height, pos, material, segments = 24) {
     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments), material);
     mesh.name = name; mesh.position.set(...pos); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+  }
+  function gableRoof(parent, name, width, height, length, pos, material) {
+    const shape = new THREE.Shape();
+    shape.moveTo(-width / 2, 0); shape.lineTo(width / 2, 0);
+    shape.lineTo(width / 2, height * .48); shape.lineTo(0, height);
+    shape.lineTo(-width / 2, height * .48); shape.closePath();
+    const geometry = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: .055, bevelThickness: .055 });
+    geometry.translate(0, 0, -length / 2);
+    const roof = new THREE.Mesh(geometry, material);
+    roof.name = name; roof.position.set(...pos); roof.castShadow = true; roof.receiveShadow = true; parent.add(roof); return roof;
+  }
+  function capsule(parent, name, radius, length, pos, material, axis = 'y') {
+    const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 4, 12), material);
+    mesh.name = name; mesh.position.set(...pos);
+    if (axis === 'x') mesh.rotation.z = Math.PI / 2;
+    if (axis === 'z') mesh.rotation.x = Math.PI / 2;
+    mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
   }
   function position(obj, x, y, lift = 0) {
     obj.position.set((x - .5) * WORLD * aspect, lift, (y - .5) * WORLD);
@@ -102,21 +150,26 @@ export function createBattlefield(canvas) {
       russia: { primary: '#66764f', light: '#b9a966', dark: '#363c32', trim: '#d7bd75' }
     };
     const p = friendly ? (palettes[faction] || palettes.usa) : { primary: '#794438', light: '#b87654', dark: '#39342e', trim: '#d17b4d' };
-    const primary = mat(p.primary), light = mat(p.light), dark = mat(p.dark), trim = mat(p.trim, .42, .35), glass = mat('#263b3b', .25, .28);
+    const camoPatches = friendly && faction === 'china' ? ['#744337', '#c18b4d', '#47463a'] : friendly && faction === 'russia' ? ['#394b38', '#8b8456', '#62563e'] : ['#344b4d', '#71816a', '#a09870'];
+    const primary = camouflage(p.primary, camoPatches), light = mat(p.light), dark = mat(p.dark), trim = mat(p.trim, .42, .35), glass = mat('#263b3b', .25, .28);
     const metal = mat('#4c5146', .4, .48);
     if (entity.kind === 'hq') {
       box(model, 'command foundation', [14, 1, 12], [0, .52, 0], dark);
       box(model, 'command block', [10.5, 4.2, 8], [0, 2.6, 0], primary);
-      box(model, 'command roof', [11.5, .8, 8.8], [0, 5, 0], light);
+      gableRoof(model, 'sloped command roof', 11.6, 1.55, 8.9, [0, 4.55, 0], light);
       box(model, 'command wing', [5, 2.5, 5], [-4.3, 1.8, 2.6], dark);
       box(model, 'command glass', [3.2, 1.4, .12], [0, 3.3, -4.06], glass);
       box(model, 'command stripe', [1.1, 3.2, .18], [4.1, 2.6, -4.12], trim);
+      for (const side of [-1, 1]) for (const z of [-1.55, 1.25]) {
+        box(model, 'armored side window', [.1, .9, 1.35], [side * 5.31, 3.15, z], glass);
+        box(model, 'window sill', [.16, .1, 1.5], [side * 5.34, 2.67, z], trim);
+      }
       cylinder(model, 'antenna', .09, .12, 3.2, [-5, 6.3, -2.5], metal, 8);
       box(model, 'antenna flag', [.9, .45, .08], [-4.6, 7.3, -2.5], trim);
     } else if (entity.kind === 'refinery') {
       box(model, 'refinery foundation', [13, .8, 10], [0, .42, 0], dark);
       box(model, 'refinery hall', [8, 3.5, 7], [-1.6, 2.3, 0], primary);
-      box(model, 'refinery roof', [8.8, .65, 7.8], [-1.6, 4.35, 0], light);
+      gableRoof(model, 'sloped refinery roof', 8.9, 1.35, 7.9, [-1.6, 4.08, 0], light);
       for (let i = 0; i < 2; i++) {
         cylinder(model, 'supply silo', 1.65, 1.85, 5.2, [4.25, 3.05, -2 + i * 4], metal, 14);
         cylinder(model, 'silo cap', 1.7, 1.7, .45, [4.25, 5.85, -2 + i * 4], trim, 14);
@@ -127,8 +180,12 @@ export function createBattlefield(canvas) {
     } else if (entity.kind === 'power') {
       box(model, 'power foundation', [9, .7, 8], [0, .35, 0], dark);
       box(model, 'power hall', [6.8, 3.8, 5.8], [0, 2.25, 0], primary);
-      box(model, 'power roof', [7.6, .65, 6.6], [0, 4.4, 0], light);
-      for (let i = -1; i <= 1; i++) cylinder(model, 'cooling stack', .5, .72, 3.6, [i * 2.3, 2.2, 3.2], metal, 10);
+      gableRoof(model, 'ventilated power-house roof', 7.7, 1.2, 6.7, [0, 4.18, 0], light);
+      for (let i = -1; i <= 1; i++) cylinder(model, 'cooling stack', .5, .72, 4.4, [i * 2.3, 3.8, 3.2], metal, 16);
+      for (const x of [-2.1, 2.1]) {
+        box(model, 'power-house window', [.72, 1.05, .1], [x, 2.85, -2.96], glass);
+        box(model, 'reinforced window sill', [.9, .12, .16], [x, 2.28, -3.02], trim);
+      }
       box(model, 'power insignia', [2.4, .15, .12], [0, 3, -2.98], trim);
     } else if (entity.kind === 'tech') {
       box(model, 'research foundation', [12, .8, 10], [0, .4, 0], dark);
@@ -142,7 +199,7 @@ export function createBattlefield(canvas) {
       const factory = entity.kind === 'factory';
       box(model, 'production foundation', [factory ? 13 : 11, .8, factory ? 10 : 9], [0, .4, 0], dark);
       box(model, 'production hall', [factory ? 10 : 8.5, 4, factory ? 7.5 : 6.5], [0, 2.5, 0], primary);
-      box(model, 'production roof', [factory ? 11 : 9.5, .65, factory ? 8.4 : 7.4], [0, 4.85, 0], light);
+      gableRoof(model, 'sloped production roof', factory ? 11.2 : 9.7, 1.5, factory ? 8.6 : 7.6, [0, 4.48, 0], light);
       box(model, 'garage door', [factory ? 5 : 3.8, 3, .18], [0, 2, -(factory ? 3.85 : 3.35)], dark);
       box(model, 'door stripe', [factory ? 5 : 3.8, .26, .22], [0, 3.2, -(factory ? 3.98 : 3.48)], trim);
       for (let i = -1; i <= 1; i++) box(model, 'roof vent', [1.1, .6, .8], [i * 2.4, 5.45, 1.5], metal);
@@ -158,30 +215,39 @@ export function createBattlefield(canvas) {
         const soldier = new THREE.Group();
         soldier.position.set((i % 2 ? 1 : -1) * .82, 0, (i < 2 ? -1 : 1) * .78); model.add(soldier);
         const skin = mat(friendly && faction === 'china' ? '#c59067' : '#b98e6b');
-        const cloth = mat(friendly && faction === 'russia' ? '#55664c' : friendly && faction === 'china' ? '#8b6348' : '#59634d');
+        const clothBase = friendly && faction === 'russia' ? '#55664c' : friendly && faction === 'china' ? '#8b6348' : '#59634d';
+        const cloth = camouflage(clothBase, camoPatches);
         const boot = mat('#302f2a'), armor = mat(friendly ? p.primary : '#654334');
         cylinder(soldier, 'neck', .13, .15, .22, [0, 1.48, 0], skin, 8);
-        const torso = box(soldier, 'field uniform', [.66, .78, .42], [0, 1.03, 0], cloth);
-        box(soldier, 'plate carrier', [.7, .45, .16], [0, 1.12, -.23], armor);
+        const torso = capsule(soldier, 'field uniform', .29, .46, [0, 1.03, 0], cloth);
+        box(soldier, 'plate carrier', [.66, .43, .16], [0, 1.12, -.23], armor);
+        box(soldier, 'carrier front panel', [.34, .3, .045], [0, 1.13, -.33], dark);
         for (let pouch = -1; pouch <= 1; pouch++) box(soldier, 'magazine pouch', [.16, .2, .12], [pouch * .2, .99, -.34], trim);
         box(soldier, 'backpack', [.48, .62, .28], [0, 1.15, .31], dark);
         box(soldier, 'shoulder strap', [.1, .62, .09], [-.21, 1.14, -.34], trim).rotation.z = -.25;
         box(soldier, 'shoulder strap', [.1, .62, .09], [.21, 1.14, -.34], trim).rotation.z = .25;
         for (const side of [-1, 1]) {
-          const leg = box(soldier, 'combat trousers', [.25, .65, .29], [side * .19, .39, .02], cloth);
+          const leg = capsule(soldier, 'combat trousers', .145, .36, [side * .19, .39, .02], cloth);
           leg.rotation.x = side * -.05;
-          box(soldier, 'knee pad', [.27, .16, .09], [side * .19, .43, -.17], dark);
-          box(soldier, 'combat boot', [.3, .18, .42], [side * .19, .12, -.08], boot);
-          const arm = box(soldier, 'uniform sleeve', [.23, .62, .27], [side * .43, 1.06, -.06], cloth);
+          box(soldier, 'knee pad', [.24, .16, .09], [side * .19, .43, -.16], dark);
+          capsule(soldier, 'combat boot', .14, .16, [side * .19, .12, -.1], boot, 'z');
+          const arm = capsule(soldier, 'uniform sleeve', .13, .35, [side * .43, 1.06, -.06], cloth);
           arm.rotation.z = side * -.2; arm.rotation.x = -.35;
-          const hand = new THREE.Mesh(new THREE.SphereGeometry(.13, 8, 6), skin);
+          capsule(soldier, 'elbow pad', .14, .13, [side * .49, .88, -.12], dark, 'x');
+          const hand = new THREE.Mesh(new THREE.SphereGeometry(.13, 12, 8), skin);
           hand.position.set(side * .48, .83, -.34); hand.castShadow = true; soldier.add(hand);
         }
         const head = new THREE.Mesh(new THREE.SphereGeometry(.25, 10, 8), skin);
         head.position.set(0, 1.72, -.02); head.castShadow = true; soldier.add(head);
-        cylinder(soldier, 'helmet shell', .29, .31, .22, [0, 1.92, -.02], friendly && faction === 'china' ? trim : cloth, 10);
-        box(soldier, 'helmet brim', [.62, .07, .48], [0, 1.84, -.03], friendly && faction === 'china' ? trim : cloth);
+        const helmet = new THREE.Mesh(new THREE.SphereGeometry(.31, 18, 12, 0, Math.PI * 2, 0, Math.PI * .62), friendly && faction === 'china' ? trim : cloth);
+        helmet.name = 'composite helmet shell'; helmet.scale.set(1, .9, 1.08); helmet.position.set(0, 1.91, -.02); helmet.castShadow = true; soldier.add(helmet);
+        capsule(soldier, 'helmet brim', .08, .42, [0, 1.84, -.04], friendly && faction === 'china' ? trim : cloth, 'x');
         box(soldier, 'helmet insignia', [.12, .12, .04], [0, 1.94, -.29], trim);
+        box(soldier, 'eye protection frame', [.4, .11, .08], [0, 1.68, -.235], dark);
+        for (const lensX of [-.105, .105]) {
+          const lens = new THREE.Mesh(new THREE.SphereGeometry(.075, 12, 8), glass);
+          lens.name = 'tactical goggle lens'; lens.scale.set(1, .65, .35); lens.position.set(lensX, 1.68, -.28); soldier.add(lens);
+        }
         box(soldier, 'rifle stock', [.15, .16, .42], [.26, 1.18, -.35], dark);
         box(soldier, 'service rifle', [.14, .14, 1.12], [.26, 1.18, -.98], metal);
         cylinder(soldier, 'rifle muzzle', .055, .055, .16, [.26, 1.18, -1.61], dark, 7);
@@ -197,6 +263,7 @@ export function createBattlefield(canvas) {
         box(vehicle, 'armored truck chassis', [5.4, .8, 9.4], [0, .78, 0], dark);
         box(vehicle, 'front bumper', [5.1, .32, .35], [0, .88, -4.7], metal);
         box(vehicle, 'truck cab', [4.45, 2.55, 3.6], [0, 2.18, -2.65], primary);
+        const cabNose = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), primary); cabNose.name = 'rounded cab nose'; cabNose.scale.set(2.12, .72, .62); cabNose.position.set(0, 1.65, -4.12); cabNose.castShadow = true; vehicle.add(cabNose);
         box(vehicle, 'cab roof', [4.6, .28, 3.5], [0, 3.55, -2.58], light);
         box(vehicle, 'truck windshield', [3.6, 1.15, .12], [0, 2.53, -4.47], glass);
         for (const x of [-1.75, 1.75]) {
@@ -214,7 +281,7 @@ export function createBattlefield(canvas) {
         box(vehicle, 'cargo tie bar', [4.9, .18, .2], [0, 3.05, -.15], trim);
       } else if (scout) {
         box(vehicle, 'recon chassis', [4.5, .72, 7.4], [0, .78, 0], dark);
-        box(vehicle, 'armored scout hull', [4.5, 1.25, 6.8], [0, 1.38, .05], primary);
+        const scoutHull = new THREE.Mesh(new THREE.CapsuleGeometry(1.7, 3.05, 5, 16), primary); scoutHull.name = 'rounded scout hull'; scoutHull.rotation.x = Math.PI / 2; scoutHull.scale.set(1, 1, .52); scoutHull.position.set(0, 1.35, .05); scoutHull.castShadow = true; scoutHull.receiveShadow = true; vehicle.add(scoutHull);
         box(vehicle, 'hood armor', [4.25, .48, 2.25], [0, 1.98, -2.12], light);
         box(vehicle, 'windshield', [3.65, 1.02, .12], [0, 2.35, -1.08], glass).rotation.x = -.12;
         box(vehicle, 'roof rack', [3.6, .16, 2.65], [0, 2.96, .3], metal);
@@ -236,6 +303,8 @@ export function createBattlefield(canvas) {
         const width = faction === 'china' ? 6.7 : 6.2;
         const length = faction === 'china' ? 9.8 : 9.2;
         box(vehicle, 'lower armored hull', [width, 1.05, length], [0, .82, .05], dark);
+        const hull = new THREE.Mesh(new THREE.CapsuleGeometry(width * .36, length * .53, 5, 20), primary);
+        hull.name = 'rounded armored upper hull'; hull.rotation.x = Math.PI / 2; hull.scale.set(1, .58, 1); hull.position.set(0, 1.75, .02); hull.castShadow = true; hull.receiveShadow = true; vehicle.add(hull);
         box(vehicle, 'sloped upper glacis', [width - .35, 1.2, 6.2], [0, 1.82, -1.05], primary);
         box(vehicle, 'engine deck', [width - .5, .62, 2.65], [0, 1.72, 3.03], light);
         box(vehicle, 'front glacis plate', [width - .65, .28, .18], [0, 2.25, -4.52], trim);
@@ -256,8 +325,8 @@ export function createBattlefield(canvas) {
         for (let i = 0; i < 5; i++) box(vehicle, 'engine vent', [.18, .08, .48], [-1.5 + i * .75, 2.06, 3.15], dark);
         const turret = new THREE.Group(); turret.name = 'turret'; turret.position.set(0, 2.48, -.35); vehicle.add(turret);
         cylinder(turret, 'turret race', 2.05, 2.2, .35, [0, -.12, 0], metal, 12);
-        const shell = new THREE.Mesh(new THREE.DodecahedronGeometry(1.95, 1), primary);
-        shell.name = 'faceted tank turret'; shell.scale.set(1.14, .72, 1.28); shell.position.set(0, .38, .12); shell.castShadow = true; shell.receiveShadow = true; turret.add(shell);
+        const shell = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), primary);
+        shell.name = 'rounded composite tank turret'; shell.scale.set(2.15, 1.12, 2.45); shell.position.set(0, .38, .12); shell.castShadow = true; shell.receiveShadow = true; turret.add(shell);
         box(turret, 'gun mantlet', [1.3, .92, .9], [0, .5, -1.45], light);
         cylinder(turret, 'main gun barrel', .25, .38, 5.5, [0, .55, -3.9], metal, 12).rotation.x = Math.PI / 2;
         cylinder(turret, 'muzzle brake', .34, .32, .6, [0, .55, -6.73], dark, 10).rotation.x = Math.PI / 2;
@@ -282,12 +351,6 @@ export function createBattlefield(canvas) {
     } else if (friendly && faction === 'russia' && ['hq','factory','tech'].includes(entity.kind)) {
       for (const x of [-4.1, 4.1]) box(model, 'reinforced armor plate', [1.5, 2.2, 1.1], [x, 1.5, 2.4], metal);
       cylinder(model, 'exhaust stack', .28, .42, 2.1, [4.1, 4.3, -2.7], dark, 8);
-    }
-    if (friendly && entity.kind === 'infantry' && faction === 'china') {
-      box(model, 'field pack', [.55, .8, .45], [0, 1.2, .48], trim);
-      box(model, 'rifle stock', [.22, .2, .8], [.35, 1.05, -1.35], primary);
-    } else if (friendly && entity.kind === 'infantry' && faction === 'russia') {
-      for (const x of [-.9, .9]) box(model, 'reinforced shoulder', [.5, .42, .55], [x, 1.45, 0], trim);
     }
     const ring = new THREE.Mesh(new THREE.RingGeometry(.8, 1, 36), basic(friendly ? '#d9f17d' : '#e36c51', .92));
     ring.rotation.x = -Math.PI / 2; ring.position.y = .12; ring.name = 'selection-ring'; group.add(ring);
