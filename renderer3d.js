@@ -9,8 +9,9 @@ export function createBattlefield(canvas) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
 
-  const WORLD = 160;
-  const HALF_WORLD = WORLD / 2;
+  const WORLD = 224;
+  const VIEW_SIZE = 160;
+  const HALF_VIEW = VIEW_SIZE / 2;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#71775c');
   scene.fog = new THREE.Fog('#71775c', 125, 230);
@@ -136,8 +137,8 @@ export function createBattlefield(canvas) {
     const w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
     aspect = w / h;
     renderer.setSize(w, h, false);
-    camera.left = -HALF_WORLD * aspect / currentZoom; camera.right = HALF_WORLD * aspect / currentZoom;
-    camera.top = HALF_WORLD / currentZoom; camera.bottom = -HALF_WORLD / currentZoom; camera.updateProjectionMatrix();
+    camera.left = -HALF_VIEW * aspect / currentZoom; camera.right = HALF_VIEW * aspect / currentZoom;
+    camera.top = HALF_VIEW / currentZoom; camera.bottom = -HALF_VIEW / currentZoom; camera.updateProjectionMatrix();
     const ground = scene.getObjectByName('terrain'); if (ground) ground.scale.x = aspect;
     fogPlane.scale.x = aspect;
   }
@@ -396,8 +397,8 @@ export function createBattlefield(canvas) {
     camera.position.set(centerX, 190, centerZ + 92);
     camera.lookAt(centerX, 0, centerZ);
     camera.rotation.z = 0;
-    camera.left = -HALF_WORLD * aspect / currentZoom; camera.right = HALF_WORLD * aspect / currentZoom;
-    camera.top = HALF_WORLD / currentZoom; camera.bottom = -HALF_WORLD / currentZoom; camera.updateProjectionMatrix();
+    camera.left = -HALF_VIEW * aspect / currentZoom; camera.right = HALF_VIEW * aspect / currentZoom;
+    camera.top = HALF_VIEW / currentZoom; camera.bottom = -HALF_VIEW / currentZoom; camera.updateProjectionMatrix();
 
     const live = new Set();
     updateFog(frame);
