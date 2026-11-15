@@ -23,12 +23,12 @@ import { createBattlefield } from './renderer3d.js';
     china:{infantry:{damage:1.12},scout:{damage:1.22,rate:.8},tank:{hp:1.18,damage:1.08},collector:{hp:1.12}},
     russia:{infantry:{hp:1.2},scout:{hp:1.15},tank:{hp:1.3},collector:{hp:1.25}}
   };
-  const buildingStats = {hq:{hp:520,size:45,type:'Command Center',icon:'⌂'},refinery:{hp:360,size:38,type:'Supply Refinery',icon:'⬡'},power:{hp:180,size:30,type:'Power',icon:'ϟ'},barracks:{hp:240,size:34,type:'Infantry Production',icon:'▤'},factory:{hp:300,size:40,type:'Vehicle Production',icon:'▰'},tech:{hp:330,size:37,type:'Advanced Command',icon:'⌘'},defense:{hp:260,size:29,type:'Defense',icon:'⊕'}};
+  const buildingStats = {hq:{hp:520,size:450,type:'Command Center',icon:'⌂'},refinery:{hp:360,size:380,type:'Supply Refinery',icon:'⬡'},power:{hp:180,size:300,type:'Power',icon:'ϟ'},barracks:{hp:240,size:340,type:'Infantry Production',icon:'▤'},factory:{hp:300,size:400,type:'Vehicle Production',icon:'▰'},tech:{hp:330,size:370,type:'Advanced Command',icon:'⌘'},defense:{hp:260,size:290,type:'Defense',icon:'⊕'}};
   const ui = {credits:$('credits'),income:$('income'),power:$('power'),army:$('army-count'),type:$('selection-type'),name:$('selection-name'),icon:$('selection-icon'),health:$('selection-health'),toast:$('toast'),start:$('start-screen'),pause:$('pause-screen'),end:$('end-screen'),objective:$('objective-card')};
   let width=0,height=0, faction='usa', playing=false,paused=false,over=false, credits=3500, time=0,last=0,toastTime=0, action='select', selected=null, placement=null, tab='structures', serial=0, pointer={x:.5,y:.5};
   let units=[],buildings=[],enemies=[],nodes=[],decor=[],shots=[],particles=[],production=[], camera={x:.5,y:.5,z:.075}, enemyClock=110, enemyBuildClock=24, enemyAssaultStarted=false;
   let mapGesture=null; const touchPoints=new Map(); let pinch=null;
-  const WORLD_SIZE=89600, MAP_SCALE=WORLD_SIZE/160, ZOOM_MIN=.014, ZOOM_MAX=.11;
+  const WORLD_SIZE=896000, MAP_SCALE=WORLD_SIZE/1600, ZOOM_MIN=.014, ZOOM_MAX=.11;
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
   const rand=(a,b)=>a+Math.random()*(b-a);
   const own=team=>team==='blue';

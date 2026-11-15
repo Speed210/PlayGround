@@ -9,14 +9,14 @@ export function createBattlefield(canvas) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
 
-  const MAP_ENLARGEMENT = 200;
+  const MAP_ENLARGEMENT = 2000;
   const WORLD = 448 * MAP_ENLARGEMENT;
   const VIEW_SIZE = 1600;
   const HALF_VIEW = VIEW_SIZE / 2;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#71775c');
   // Keep the entire theater clear; fog-of-war is disabled for this battlefield.
-  const camera = new THREE.OrthographicCamera(-50, 50, 50, -50, .1, 12000);
+  const camera = new THREE.OrthographicCamera(-50, 50, 50, -50, .1, 120000);
   camera.up.set(0, 0, -1);
   camera.position.set(0, 120, 60);
   camera.lookAt(0, 0, 0);
