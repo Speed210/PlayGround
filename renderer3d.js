@@ -9,24 +9,24 @@ export function createBattlefield(canvas) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
 
-  const MAP_ENLARGEMENT = 2000;
+  const MAP_ENLARGEMENT = 20000;
   const WORLD = 448 * MAP_ENLARGEMENT;
   const VIEW_SIZE = 1600;
   const HALF_VIEW = VIEW_SIZE / 2;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#71775c');
   // Keep the entire theater clear; fog-of-war is disabled for this battlefield.
-  const camera = new THREE.OrthographicCamera(-50, 50, 50, -50, .1, 120000);
+  const camera = new THREE.OrthographicCamera(-50, 50, 50, -50, .1, 1200000);
   camera.up.set(0, 0, -1);
-  camera.position.set(0, 120, 60);
+  camera.position.set(0, 1200, 600);
   camera.lookAt(0, 0, 0);
 
   scene.add(new THREE.HemisphereLight('#e4e6c6', '#353b2d', 1.55));
   const sun = new THREE.DirectionalLight('#fff0cb', 2.55);
-  sun.position.set(-38, 70, -28); sun.castShadow = true;
+  sun.position.set(-380, 700, -280); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.camera.left = -2600; sun.shadow.camera.right = 2600;
-  sun.shadow.camera.top = 2600; sun.shadow.camera.bottom = -2600;
+  sun.shadow.camera.left = -26000; sun.shadow.camera.right = 26000;
+  sun.shadow.camera.top = 26000; sun.shadow.camera.bottom = -26000;
   scene.add(sun, sun.target);
   const fill = new THREE.DirectionalLight('#b4c6ce', .48); fill.position.set(30, 35, 40); scene.add(fill);
 
@@ -413,7 +413,7 @@ export function createBattlefield(canvas) {
     resize();
     const centerX = (frame.camera.x - .5) * WORLD * aspect;
     const centerZ = (frame.camera.y - .5) * WORLD;
-    camera.position.set(centerX, 190, centerZ + 92);
+    camera.position.set(centerX, 1900, centerZ + 920);
     camera.lookAt(centerX, 0, centerZ);
     camera.rotation.z = 0;
     camera.left = -HALF_VIEW * aspect / currentZoom; camera.right = HALF_VIEW * aspect / currentZoom;
@@ -476,7 +476,7 @@ export function createBattlefield(canvas) {
     let ghost = scene.getObjectByName('placement-preview');
     if (frame.placement) {
       if (!ghost) {
-        ghost = new THREE.Mesh(new THREE.BoxGeometry(8, 4, 8), new THREE.MeshBasicMaterial({ color: '#c8f05b', wireframe: true, transparent: true, opacity: .8 }));
+        ghost = new THREE.Mesh(new THREE.BoxGeometry(80, 40, 80), new THREE.MeshBasicMaterial({ color: '#c8f05b', wireframe: true, transparent: true, opacity: .8 }));
         ghost.name = 'placement-preview'; scene.add(ghost);
       }
       const pointer = frame.pointer || { x: .5, y: .5 };
