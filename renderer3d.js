@@ -9,9 +9,9 @@ export function createBattlefield(canvas) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
 
-  const MAP_ENLARGEMENT = 20;
+  const MAP_ENLARGEMENT = 200;
   const WORLD = 448 * MAP_ENLARGEMENT;
-  const VIEW_SIZE = 160;
+  const VIEW_SIZE = 1600;
   const HALF_VIEW = VIEW_SIZE / 2;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#71775c');
@@ -25,8 +25,8 @@ export function createBattlefield(canvas) {
   const sun = new THREE.DirectionalLight('#fff0cb', 2.55);
   sun.position.set(-38, 70, -28); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.camera.left = -260; sun.shadow.camera.right = 260;
-  sun.shadow.camera.top = 260; sun.shadow.camera.bottom = -260;
+  sun.shadow.camera.left = -2600; sun.shadow.camera.right = 2600;
+  sun.shadow.camera.top = 2600; sun.shadow.camera.bottom = -2600;
   scene.add(sun, sun.target);
   const fill = new THREE.DirectionalLight('#b4c6ce', .48); fill.position.set(30, 35, 40); scene.add(fill);
 
@@ -428,7 +428,7 @@ export function createBattlefield(canvas) {
         if (obj) { entityRoot.remove(obj); disposeTree(obj); }
         obj = buildEntity(entity, frame.faction); entities.set(entity.id, obj); entityRoot.add(obj);
       }
-      const scale = entity.size ? Math.max(.35, entity.size / 70) * 10 : Math.max(.85, entity.radius / 7);
+      const scale = entity.size ? Math.max(.35, entity.size / 70) * 100 : Math.max(.85, entity.radius / 7);
       position(obj, entity.x, entity.y);
       obj.scale.setScalar(scale);
       const moving = entity.move && Math.hypot((entity.move.x - entity.x) * aspect, entity.move.y - entity.y) > .003;

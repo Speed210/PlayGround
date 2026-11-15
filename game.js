@@ -28,7 +28,7 @@ import { createBattlefield } from './renderer3d.js';
   let width=0,height=0, faction='usa', playing=false,paused=false,over=false, credits=3500, time=0,last=0,toastTime=0, action='select', selected=null, placement=null, tab='structures', serial=0, pointer={x:.5,y:.5};
   let units=[],buildings=[],enemies=[],nodes=[],decor=[],shots=[],particles=[],production=[], camera={x:.5,y:.5,z:.075}, enemyClock=110, enemyBuildClock=24, enemyAssaultStarted=false;
   let mapGesture=null; const touchPoints=new Map(); let pinch=null;
-  const WORLD_SIZE=8960, MAP_SCALE=WORLD_SIZE/160, ZOOM_MIN=.014, ZOOM_MAX=.11;
+  const WORLD_SIZE=89600, MAP_SCALE=WORLD_SIZE/160, ZOOM_MIN=.014, ZOOM_MAX=.11;
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
   const rand=(a,b)=>a+Math.random()*(b-a);
   const own=team=>team==='blue';
