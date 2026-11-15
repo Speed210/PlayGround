@@ -9,13 +9,14 @@ export function createBattlefield(canvas) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
 
-  const WORLD = 448;
+  const MAP_ENLARGEMENT = 20;
+  const WORLD = 448 * MAP_ENLARGEMENT;
   const VIEW_SIZE = 160;
   const HALF_VIEW = VIEW_SIZE / 2;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#71775c');
   // Keep the entire theater clear; fog-of-war is disabled for this battlefield.
-  const camera = new THREE.OrthographicCamera(-50, 50, 50, -50, .1, 1200);
+  const camera = new THREE.OrthographicCamera(-50, 50, 50, -50, .1, 12000);
   camera.up.set(0, 0, -1);
   camera.position.set(0, 120, 60);
   camera.lookAt(0, 0, 0);
@@ -26,7 +27,7 @@ export function createBattlefield(canvas) {
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.left = -260; sun.shadow.camera.right = 260;
   sun.shadow.camera.top = 260; sun.shadow.camera.bottom = -260;
-  scene.add(sun);
+  scene.add(sun, sun.target);
   const fill = new THREE.DirectionalLight('#b4c6ce', .48); fill.position.set(30, 35, 40); scene.add(fill);
 
   const entityRoot = new THREE.Group(); entityRoot.renderOrder = 3; scene.add(entityRoot);
@@ -109,7 +110,7 @@ export function createBattlefield(canvas) {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD), new THREE.MeshStandardMaterial({ map: texture, color: '#b0aa7c', roughness: 1 }));
     ground.rotation.x = -Math.PI / 2; ground.scale.x = aspect; ground.receiveShadow = true; ground.name = 'terrain'; scene.add(ground);
     const lines = new THREE.Group();
-    const points = [[-164, -136], [-96, -84], [-28, -24], [44, 36], [104, 96], [164, 140]];
+    const points = [[-164, -136], [-96, -84], [-28, -24], [44, 36], [104, 96], [164, 140]].map(([x, z]) => [x * MAP_ENLARGEMENT, z * MAP_ENLARGEMENT]);
     for (let i = 0; i < points.length - 1; i++) {
       const [x1, z1] = points[i], [x2, z2] = points[i + 1];
       const dx = x2 - x1, dz = z2 - z1, length = Math.hypot(dx, dz), angle = Math.atan2(dx, dz);
@@ -124,7 +125,7 @@ export function createBattlefield(canvas) {
     scene.add(lines);
     for (let i = 0; i < 17; i++) {
       const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(.55 + (i % 3) * .22, 0), mat(i % 2 ? '#6d6a56' : '#81785e'));
-      rock.position.set(Math.sin(i * 17.3) * 150 * aspect, .22, Math.cos(i * 8.7) * 140); rock.scale.set(1.4, .55, .9); rock.rotation.y = i; rock.castShadow = true; scene.add(rock);
+      rock.position.set(Math.sin(i * 17.3) * 150 * MAP_ENLARGEMENT * aspect, .22, Math.cos(i * 8.7) * 140 * MAP_ENLARGEMENT); rock.scale.set(1.4, .55, .9); rock.rotation.y = i; rock.castShadow = true; scene.add(rock);
     }
   }
   makeGround();
@@ -427,7 +428,7 @@ export function createBattlefield(canvas) {
         if (obj) { entityRoot.remove(obj); disposeTree(obj); }
         obj = buildEntity(entity, frame.faction); entities.set(entity.id, obj); entityRoot.add(obj);
       }
-      const scale = entity.size ? Math.max(.35, entity.size / 70) : Math.max(.85, entity.radius / 7);
+      const scale = entity.size ? Math.max(.35, entity.size / 70) * 10 : Math.max(.85, entity.radius / 7);
       position(obj, entity.x, entity.y);
       obj.scale.setScalar(scale);
       const moving = entity.move && Math.hypot((entity.move.x - entity.x) * aspect, entity.move.y - entity.y) > .003;
